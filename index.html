@@ -16,6 +16,10 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
+  <!-- 匯出 Excel 與 PPT 核心函式庫 -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
     body { display: flex; height: 100vh; overflow: hidden; background: #0f172a; color: #f8fafc; }
@@ -29,8 +33,15 @@
     .search-icon { position: absolute; left: 10px; top: 10px; font-size: 13px; color: #94a3b8; }
     
     .filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
-    .filter-full { margin-bottom: 4px; }
+    .filter-full { margin-bottom: 8px; }
     .filter-select { width: 100%; padding: 7px 10px; background: #1e293b; border: 1px solid #475569; border-radius: 6px; color: white; font-size: 13px; font-weight: bold; cursor: pointer; }
+
+    /* 報表匯出按鈕列 */
+    .export-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+    .btn-export-excel { padding: 8px; background: #047857; color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+    .btn-export-excel:hover { background: #065f46; }
+    .btn-export-ppt { padding: 8px; background: #b45309; color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+    .btn-export-ppt:hover { background: #92400e; }
 
     .dashboard { background: #0f172a; padding: 14px; border-radius: 12px; margin-bottom: 14px; border: 1px solid #334155; }
     .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
@@ -54,7 +65,6 @@
     input, select, textarea { width: 100%; padding: 7px 9px; background: #334155; border: 1px solid #475569; border-radius: 6px; color: white; font-size: 13px; }
     input:focus, select:focus, textarea:focus { outline: none; border-color: #38bdf8; }
     
-    /* 複訪快捷按鈕列 */
     .quick-date-row { display: flex; gap: 6px; margin-top: 5px; }
     .quick-date-btn { flex: 1; padding: 4px 0; background: #334155; color: #38bdf8; border: 1px solid #475569; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; }
     .quick-date-btn:hover { background: #475569; color: white; }
@@ -140,6 +150,12 @@
           <option value="purple">🟣 合作結案（已成交/常態維護）</option>
         </select>
       </div>
+
+      <!-- 戰情報告匯出區 -->
+      <div class="export-btn-row">
+        <button type="button" class="btn-export-excel" onclick="exportToExcel()">📊 匯出 Excel (.xlsx)</button>
+        <button type="button" class="btn-export-ppt" onclick="exportToPPT()">📑 匯出簡報 (.pptx)</button>
+      </div>
     </div>
 
     <div class="dashboard">
@@ -191,7 +207,6 @@
         <input type="text" id="equipment" placeholder="例如：海芙三代、玩美電波、探頭耗材量大">
       </div>
 
-      <!-- 預計複訪日與快捷鍵 -->
       <div class="form-group">
         <label>🔔 預計複訪日期（選填）</label>
         <input type="date" id="followUpDate">
@@ -313,7 +328,7 @@
       {"id":"xz_28","district":"新莊區","clientType":"prospect","name":"雅緹美學診所","address":"新北市新莊區福美街126號","lat":25.0525,"lng":121.4618,"status":"red","equipment":"評估中","notes":"住宅區社區型診所，主推電音波拉皮與日常微整維護"},
       {"id":"xz_29","district":"新莊區","clientType":"prospect","name":"康緹醫美診所","address":"新北市新莊區中正路729號2樓","lat":25.0255,"lng":121.4182,"status":"red","equipment":"評估中","notes":"捷運丹鳳站出口旁，主攻年輕上班族微整與皮秒雷射"},
       {"id":"xz_30","district":"新莊區","clientType":"prospect","name":"新莊美無極診所","address":"新北市新莊區公園路58號","lat":25.0392,"lng":121.4525,"status":"red","equipment":"評估中","notes":"新莊運動公園旁，專注抗老拉提、音波與美體雕塑"},
-      {"id":"xz_31","district":"新莊區","clientType":"prospect","name":"欣妍皮膚科診所","address":"新北市新莊區中原路135號","lat":25.0515,"lng":121.4512,"status":"red","equipment":"評估中","notes":"中原商圈高人氣專科，自費光療與微整針劑量穩"},
+      {"id":"xz_31","district":"新莊區","clientType":"prospect","name":"欣妍皮膚科診所","address":"新北市中原路135號","lat":25.0515,"lng":121.4512,"status":"red","equipment":"評估中","notes":"中原商圈高人氣專科，自費光療與微整針劑量穩"},
       {"id":"xz_32","district":"新莊區","clientType":"prospect","name":"研美學診所","address":"新北市新莊區中央路236號","lat":25.0601,"lng":121.4535,"status":"red","equipment":"評估中","notes":"副都心大道指標高端自費診所，客單價高"},
       {"id":"xz_33","district":"新莊區","clientType":"prospect","name":"風華美學診所（新莊院）","address":"新北市新莊區中華路一段45號","lat":25.0381,"lng":121.4542,"status":"red","equipment":"評估中","notes":"中華路林蔭道旁，主打臉部微整雕塑與緊膚光療"},
       {"id":"xz_34","district":"新莊區","clientType":"prospect","name":"博愛皮膚科診所","address":"新北市新莊區四維路122號","lat":25.0185,"lng":121.4215,"status":"red","equipment":"評估中","notes":"四維市場商圈，門診量體龐大，入門光電客群穩"},
@@ -442,6 +457,14 @@
       purple: '#a855f7'
     };
 
+    const statusNames = {
+      red: '🔴 未探勘/迷霧',
+      yellow: '🟡 初訪摸底',
+      orange: '🟠 鎖定窗口',
+      green: '🟢 評估試機',
+      purple: '🟣 合作結案'
+    };
+
     let clinics = [];
     let currentDistrict = '板橋區';
     let currentClientType = 'ALL';
@@ -508,7 +531,6 @@
       renderMap();
     }
 
-    // 快捷日期設定輔助
     window.setQuickDate = function(days) {
       const d = new Date();
       d.setDate(d.getDate() + days);
@@ -518,11 +540,8 @@
       document.getElementById('followUpDate').value = `${yyyy}-${mm}-${dd}`;
     };
 
-    function renderMap() {
-      markers.forEach(m => map.removeLayer(m));
-      markers = [];
-
-      const filtered = clinics.filter(item => {
+    function getFilteredClinics() {
+      return clinics.filter(item => {
         const matchDistrict = (currentDistrict === 'ALL') || (item.district === currentDistrict);
         const matchClient = (currentClientType === 'ALL') || (item.clientType === currentClientType);
         const matchStatus = (currentStatusFilter === 'ALL') || (item.status === currentStatusFilter);
@@ -536,6 +555,13 @@
 
         return matchDistrict && matchClient && matchStatus && matchSearch;
       });
+    }
+
+    function renderMap() {
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+
+      const filtered = getFilteredClinics();
 
       filtered.forEach(item => {
         const isExisting = item.clientType === 'existing';
@@ -614,6 +640,123 @@
       }
     }
 
+    /* 📊 匯出 Excel 功能 */
+    window.exportToExcel = function() {
+      const list = getFilteredClinics();
+      if (list.length === 0) {
+        alert('目前篩選條件下沒有任何診所可匯出！');
+        return;
+      }
+
+      const rows = list.map(c => ({
+        "責任轄區": c.district || "其他",
+        "診所名稱": c.name || "",
+        "客戶群體": c.clientType === 'existing' ? '🤝 既有客戶(耗材/擴機)' : '🎯 陌開客戶(設備拓展)',
+        "推進階段": statusNames[c.status] || c.status,
+        "地址": c.address || "",
+        "現有機台與耗材需求": c.equipment || "未註明",
+        "最新情報備忘與策略": c.notes || "無",
+        "上次拜訪日期": c.lastVisitDate || "未到訪",
+        "預計複訪日期": c.followUpDate || "無"
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "醫美業務戰情報表");
+
+      const dateTag = new Date().toISOString().slice(0, 10);
+      const scopeTag = currentDistrict === 'ALL' ? '新北全區' : currentDistrict;
+      XLSX.writeFile(workbook, `醫美業務戰情報表_${scopeTag}_${dateTag}.xlsx`);
+    };
+
+    /* 📑 匯出 PPT 簡報功能 */
+    window.exportToPPT = function() {
+      const list = getFilteredClinics();
+      if (list.length === 0) {
+        alert('目前篩選條件下沒有任何診所可匯出簡報！');
+        return;
+      }
+
+      const pptx = new PptxGenJS();
+      pptx.layout = 'LAYOUT_16x9';
+
+      const scopeTag = currentDistrict === 'ALL' ? '新北市全區' : currentDistrict;
+      const todayTag = new Date().toISOString().slice(0, 10);
+
+      // 第一頁：簡報封面
+      const cover = pptx.addSlide();
+      cover.background = { color: "0F172A" };
+      cover.addText("新北市醫美拓展戰報", {
+        x: 1.0, y: 2.0, w: 8.5, h: 1.2,
+        fontSize: 36, bold: true, color: "38BDF8"
+      });
+      cover.addText(`責任目標轄區：${scopeTag}  |  產出日期：${todayTag}\n當前管線顯示診所總數：${list.length} 家`, {
+        x: 1.0, y: 3.4, w: 8.5, h: 1.0,
+        fontSize: 18, color: "CBD5E1"
+      });
+
+      // 後續頁面：每頁放置 2 家診所的高階卡片報告
+      for (let i = 0; i < list.length; i += 2) {
+        const slide = pptx.addSlide();
+        slide.background = { color: "1E293B" };
+        
+        slide.addText(`業務探勘戰情卡片 - ${scopeTag} (${i + 1}~${Math.min(i + 2, list.length)} / 共 ${list.length} 家)`, {
+          x: 0.8, y: 0.4, w: 8.5, h: 0.5,
+          fontSize: 14, color: "94A3B8", bold: true
+        });
+
+        // 渲染最多兩張卡片 (左/右配置)
+        for (let j = 0; j < 2; j++) {
+          const item = list[i + j];
+          if (!item) break;
+
+          const posX = j === 0 ? 0.8 : 5.2;
+          
+          // 卡片背景框
+          slide.addShape(pptx.ShapeType.roundRect, {
+            x: posX, y: 1.0, w: 4.1, h: 4.1,
+            fill: { color: "0F172A" },
+            line: { color: "334155", width: 1.5 },
+            rectRadius: 0.1
+          });
+
+          // 標題與標籤
+          const clientTypeLabel = item.clientType === 'existing' ? '[🤝 既有客戶]' : '[🎯 陌開客戶]';
+          slide.addText(`${clientTypeLabel} ${item.name}`, {
+            x: posX + 0.2, y: 1.2, w: 3.7, h: 0.6,
+            fontSize: 15, bold: true, color: "38BDF8"
+          });
+
+          // 階段與地址
+          slide.addText(`推進階段：${statusNames[item.status] || item.status}\n地址：${item.address || '未註明'}`, {
+            x: posX + 0.2, y: 1.8, w: 3.7, h: 0.7,
+            fontSize: 11, color: "CBD5E1"
+          });
+
+          // 機台資訊
+          slide.addText(`現有機台/耗材：\n${item.equipment || '未註明'}`, {
+            x: posX + 0.2, y: 2.6, w: 3.7, h: 0.7,
+            fontSize: 11, color: "FACC15", bold: true
+          });
+
+          // 戰情報告
+          slide.addText(`戰情策略備忘：\n${item.notes || '無'}`, {
+            x: posX + 0.2, y: 3.4, w: 3.7, h: 1.0,
+            fontSize: 10, color: "E2E8F0"
+          });
+
+          // 日期戳記
+          const visitInfo = `拜訪日: ${item.lastVisitDate || '未記錄'}  |  預計複訪: ${item.followUpDate || '未設定'}`;
+          slide.addText(visitInfo, {
+            x: posX + 0.2, y: 4.6, w: 3.7, h: 0.4,
+            fontSize: 9, color: "94A3B8"
+          });
+        }
+      }
+
+      pptx.writeFile({ fileName: `醫美業務戰報_${scopeTag}_${todayTag}.pptx` });
+    };
+
     window.startEditClinic = function(id) {
       const target = clinics.find(c => c.id === id);
       if (!target) return;
@@ -660,7 +803,6 @@
       const followUpDate = document.getElementById('followUpDate').value;
       const detectedDistrict = detectDistrict(address);
 
-      // 自動產生當前年月日（例如：2026-09-17）
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
@@ -676,7 +818,7 @@
             status: document.getElementById('status').value,
             equipment: document.getElementById('equipment').value,
             notes: document.getElementById('notes').value,
-            lastVisitDate: todayStr, // 自動蓋上今日拜訪戳記
+            lastVisitDate: todayStr,
             followUpDate: followUpDate
           };
           
