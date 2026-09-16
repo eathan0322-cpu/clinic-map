@@ -205,7 +205,7 @@
     const db = firebase.database();
     const clinicsRef = db.ref('clinics');
 
-    // 158 家新北指標院所預設總表（板橋 38 + 新莊 35 + 中和 24 + 永和 21 + 三重 23 + 林口 17）
+    // 158 家新北指標院所預設總表
     const initialVerifiedClinics = [
       // 板橋區 (38)
       {"id":"bq_01","district":"板橋區","clientType":"prospect","name":"板橋光澤診所","address":"新北市板橋區館前東路2號","lat":25.0075,"lng":121.4619,"status":"red","equipment":"評估中","notes":"光澤旗艦大本營，光電與微整主力院所"},
@@ -414,9 +414,11 @@
     let markers = [];
 
     const map = L.map('map').setView([25.0135, 121.4645], 14);
-    L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+
+    // 換上 CartoDB 高速全球商用 CDN 圖磚（秒開不限流）
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors'
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
     }).addTo(map);
 
     clinicsRef.on('value', (snapshot) => {
@@ -458,7 +460,9 @@
       renderMap();
 
       if (shouldFly && districtCoords[currentDistrict]) {
-        map.flyTo(districtCoords[currentDistrict].center, districtCoords[currentDistrict].zoom, { duration: 1.2 });
+        // 瞬間聚焦並重繪圖磚，徹底告別平移動畫卡頓與灰底
+        map.setView(districtCoords[currentDistrict].center, districtCoords[currentDistrict].zoom);
+        setTimeout(() => map.invalidateSize(), 50);
       }
     }
 
