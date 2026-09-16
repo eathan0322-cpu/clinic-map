@@ -57,10 +57,9 @@
     button.btn-update { background: #16a34a !important; }
     button:disabled { background: #64748b; cursor: not-allowed; }
 
-    .legend { margin-top: 14px; border-top: 1px solid #334155; padding-top: 10px; font-size: 11px; }
-    .legend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 6px; }
-    .legend-item { display: flex; align-items: center; gap: 5px; color: #cbd5e1; }
-    .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+    .legend { margin-top: 14px; border-top: 1px solid #334155; padding-top: 10px; font-size: 12px; }
+    .legend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; color: #cbd5e1; font-size: 12px; }
 
     .leaflet-popup-content-wrapper { background: #1e293b; color: #f1f5f9; border-radius: 8px; }
     .leaflet-popup-tip { background: #1e293b; }
@@ -176,14 +175,14 @@
     </form>
 
     <div class="legend">
-      <div style="font-weight: bold; margin-bottom: 4px; color:#94a3b8;">階段色標與圖例：</div>
+      <div style="font-weight: bold; margin-bottom: 6px; color:#94a3b8;">階段色標與圖例：</div>
       <div class="legend-grid">
-        <div class="legend-item"><span class="dot" style="background: #ef4444;"></span> 🔴 未探勘/迷霧</div>
-        <div class="legend-item"><span class="dot" style="background: #eab308;"></span> 🟡 初訪摸底</div>
-        <div class="legend-item"><span class="dot" style="background: #f97316;"></span> 🟠 鎖定對話窗口</div>
-        <div class="legend-item"><span class="dot" style="background: #22c55e;"></span> 🟢 評估試機/報價</div>
-        <div class="legend-item"><span class="dot" style="background: #a855f7;"></span> 🟣 合作結案/維護</div>
-        <div class="legend-item"><span style="display:inline-block; width:10px; height:10px; border:2px solid #facc15; border-radius:50%;"></span> 金框：既有客戶</div>
+        <div class="legend-item">🔴 未探勘 / 迷霧</div>
+        <div class="legend-item">🟡 初訪摸底</div>
+        <div class="legend-item">🟠 鎖定對話窗口</div>
+        <div class="legend-item">🟢 評估試機 / 報價</div>
+        <div class="legend-item">🟣 合作結案 / 維護</div>
+        <div class="legend-item"><span style="display:inline-block; width:12px; height:12px; border:2.5px solid #facc15; border-radius:50%; margin-right:2px;"></span> 金框：既有客戶</div>
       </div>
     </div>
   </div>
@@ -415,10 +414,11 @@
 
     const map = L.map('map').setView([25.0135, 121.4645], 14);
 
-    // 換上 OpenStreetMap 官方標準高速圖資（完全無任何浮水印、免 API KEY）
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // 切換為極簡亮白商務風（Positron light_all），完全免費、無浮水印且極速
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors'
+      subdomains: 'abcd',
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
     }).addTo(map);
 
     clinicsRef.on('value', (snapshot) => {
@@ -460,7 +460,6 @@
       renderMap();
 
       if (shouldFly && districtCoords[currentDistrict]) {
-        // 瞬間聚焦並重繪圖磚，告別平移動畫卡頓
         map.setView(districtCoords[currentDistrict].center, districtCoords[currentDistrict].zoom);
         setTimeout(() => map.invalidateSize(), 50);
       }
