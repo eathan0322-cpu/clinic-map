@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>新北市醫美戰情室 - 雙軌業務與即時搜尋版</title>
+  <title>雙北基醫美戰情室 - 雙軌業務與即時搜尋版</title>
   
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -16,7 +16,7 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-  <!-- 匯出 Excel 與 PPT 核心函式庫 -->
+  <!-- 匯出 Excel 與 PPT 函式庫 -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 
@@ -36,7 +36,6 @@
     .filter-full { margin-bottom: 8px; }
     .filter-select { width: 100%; padding: 7px 10px; background: #1e293b; border: 1px solid #475569; border-radius: 6px; color: white; font-size: 13px; font-weight: bold; cursor: pointer; }
 
-    /* 報表匯出按鈕列 */
     .export-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
     .btn-export-excel { padding: 8px; background: #047857; color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
     .btn-export-excel:hover { background: #065f46; }
@@ -81,9 +80,9 @@
 
     .leaflet-popup-content-wrapper { background: #1e293b; color: #f1f5f9; border-radius: 8px; }
     .leaflet-popup-tip { background: #1e293b; }
-    .client-badge { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-bottom: 4px; }
+    .client-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-bottom: 4px; }
     .badge-prospect { background: #0369a1; color: #bae6fd; }
-    .badge-existing { background: #854d0e; color: #fef08a; }
+    .badge-existing { background: #854d0e; color: #fef08a; border: 1px solid #facc15; }
     .popup-date-box { background: #0f172a; padding: 6px 8px; border-radius: 6px; margin: 6px 0; font-size: 11px; border: 1px solid #334155; }
     .popup-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 8px; }
     .popup-btn { text-align: center; border: none; padding: 5px 3px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 3px; }
@@ -116,13 +115,14 @@
         <div>
           <label>行政責任轄區</label>
           <select id="districtFilter" class="filter-select" onchange="applyFilters(true)">
-            <option value="ALL">🌐 新北市全區</option>
+            <option value="ALL">🌐 全責任區顯示</option>
             <option value="板橋區">板橋區</option>
             <option value="新莊區">新莊區</option>
             <option value="中和區">中和區</option>
             <option value="永和區">永和區</option>
             <option value="三重區">三重區</option>
             <option value="林口區">林口區</option>
+            <option value="基隆市">基隆市</option>
             <option value="蘆洲區">蘆洲區</option>
             <option value="土城區">土城區</option>
             <option value="新店區">新店區</option>
@@ -140,7 +140,7 @@
       </div>
 
       <div class="filter-full">
-        <label>推進階段篩選</label>
+        <label>推進階段篩選（僅限陌開客戶）</label>
         <select id="statusFilter" class="filter-select" onchange="applyFilters()">
           <option value="ALL">🌈 全部階段顯示</option>
           <option value="red">🔴 未探勘 / 迷霧防禦</option>
@@ -151,7 +151,6 @@
         </select>
       </div>
 
-      <!-- 戰情報告匯出區 -->
       <div class="export-btn-row">
         <button type="button" class="btn-export-excel" onclick="exportToExcel()">📊 匯出 Excel (.xlsx)</button>
         <button type="button" class="btn-export-ppt" onclick="exportToPPT()">📑 匯出簡報 (.pptx)</button>
@@ -164,7 +163,7 @@
         <div class="dash-sync" id="syncStatus">🟢 雲端同步完成</div>
       </div>
       <div class="dash-score" id="totalCount">0 <span>家顯示中</span></div>
-      <div class="progress-bar" id="progressBar" title="點擊進度條可依比例快速篩選"></div>
+      <div class="progress-bar" id="progressBar" title="點擊進度條可依比例快速篩選陌開階段"></div>
     </div>
 
     <div class="form-header">
@@ -178,7 +177,7 @@
 
       <div class="form-group">
         <label>客戶屬性</label>
-        <select id="clientType">
+        <select id="clientType" onchange="handleClientTypeChange()">
           <option value="prospect">🎯 陌開客戶（主攻設備推展）</option>
           <option value="existing">🤝 既有客戶（耗材巡補 / 擴機需求）</option>
         </select>
@@ -186,13 +185,14 @@
 
       <div class="form-group">
         <label>診所名稱</label>
-        <input type="text" id="name" placeholder="例如：板橋光澤診所" required>
+        <input type="text" id="name" placeholder="例如：基隆葛萊美診所" required>
       </div>
       <div class="form-group">
         <label>診所地址</label>
-        <input type="text" id="address" placeholder="例如：新北市板橋區館前東路2號" required>
+        <input type="text" id="address" placeholder="例如：基隆市中正區義一路23號2樓" required>
       </div>
-      <div class="form-group">
+
+      <div class="form-group" id="statusFormGroup">
         <label>推進階段（戰情色號）</label>
         <select id="status">
           <option value="red">🔴 未探勘 / 迷霧防禦</option>
@@ -202,9 +202,10 @@
           <option value="purple">🟣 合作結案（已成交/常態維護）</option>
         </select>
       </div>
+
       <div class="form-group">
         <label>現有機台 / 競品與耗材需求</label>
-        <input type="text" id="equipment" placeholder="例如：海芙三代、玩美電波、探頭耗材量大">
+        <input type="text" id="equipment" placeholder="例如：海芙音波、皮秒雷射、探頭耗材量大">
       </div>
 
       <div class="form-group">
@@ -232,8 +233,8 @@
         <div class="legend-item" onclick="quickFilterStatus('yellow')">🟡 初訪摸底</div>
         <div class="legend-item" onclick="quickFilterStatus('orange')">🟠 鎖定對話窗口</div>
         <div class="legend-item" onclick="quickFilterStatus('green')">🟢 評估試機 / 報價</div>
-        <div class="legend-item" onclick="quickFilterStatus('purple')">🟣 合作結案 / 維護</div>
-        <div class="legend-item" onclick="quickFilterStatus('ALL')">🔄 顯示全部階段</div>
+        <div class="legend-item" onclick="quickFilterStatus('purple')">🟣 陌開結案</div>
+        <div class="legend-item" style="cursor:default;"><span style="display:inline-block; width:13px; height:13px; background:#0284c7; border:2.5px solid #facc15; border-radius:50%; margin-right:3px;"></span> 既有客戶(藍底金框)</div>
       </div>
     </div>
   </div>
@@ -255,7 +256,7 @@
     const db = firebase.database();
     const clinicsRef = db.ref('clinics');
 
-    // 158 家新北指標院所預設總表
+    // 170 家雙北基指標院所預設總表
     const initialVerifiedClinics = [
       // 板橋區 (38)
       {"id":"bq_01","district":"板橋區","clientType":"prospect","name":"板橋光澤診所","address":"新北市板橋區館前東路2號","lat":25.0075,"lng":121.4619,"status":"red","equipment":"評估中","notes":"光澤旗艦大本營，光電與微整主力院所"},
@@ -324,11 +325,11 @@
       {"id":"xz_24","district":"新莊區","clientType":"prospect","name":"恩緹時尚醫美診所","address":"新北市新莊區思源路332巷2號","lat":25.0489,"lng":121.4592,"status":"red","equipment":"評估中","notes":"捷運幸福站生活圈，微整針劑與非侵入緊緻療程"},
       {"id":"xz_25","district":"新莊區","clientType":"prospect","name":"美加美學診所（新莊院）","address":"新北市新莊區幸福路672號","lat":25.0485,"lng":121.4501,"status":"red","equipment":"評估中","notes":"連鎖醫美體系，以音波拉提與玻尿酸填充為主"},
       {"id":"xz_26","district":"新莊區","clientType":"prospect","name":"晶緻美學診所（新莊分院）","address":"新北市新莊區幸福路817巷6號","lat":25.0498,"lng":121.4452,"status":"red","equipment":"評估中","notes":"幸福商圈靜巷預約制院所，主攻熟客抗老拉提與肉毒"},
-      {"id":"xz_27","district":"新莊區","clientType":"prospect","name":"儷寶得皮膚科診所（新莊分部）","address":"新北市中德街18號","lat":25.0582,"lng":121.4528,"status":"red","equipment":"評估中","notes":"整合性皮膚光電中心，主打斑點痘疤與雷射複合治療"},
+      {"id":"xz_27","district":"新莊區","clientType":"prospect","name":"儷寶得皮膚科診所（新莊分部）","address":"新北市新莊區中德街18號","lat":25.0582,"lng":121.4528,"status":"red","equipment":"評估中","notes":"整合性皮膚光電中心，主打斑點痘疤與雷射複合治療"},
       {"id":"xz_28","district":"新莊區","clientType":"prospect","name":"雅緹美學診所","address":"新北市新莊區福美街126號","lat":25.0525,"lng":121.4618,"status":"red","equipment":"評估中","notes":"住宅區社區型診所，主推電音波拉皮與日常微整維護"},
       {"id":"xz_29","district":"新莊區","clientType":"prospect","name":"康緹醫美診所","address":"新北市新莊區中正路729號2樓","lat":25.0255,"lng":121.4182,"status":"red","equipment":"評估中","notes":"捷運丹鳳站出口旁，主攻年輕上班族微整與皮秒雷射"},
       {"id":"xz_30","district":"新莊區","clientType":"prospect","name":"新莊美無極診所","address":"新北市新莊區公園路58號","lat":25.0392,"lng":121.4525,"status":"red","equipment":"評估中","notes":"新莊運動公園旁，專注抗老拉提、音波與美體雕塑"},
-      {"id":"xz_31","district":"新莊區","clientType":"prospect","name":"欣妍皮膚科診所","address":"新北市中原路135號","lat":25.0515,"lng":121.4512,"status":"red","equipment":"評估中","notes":"中原商圈高人氣專科，自費光療與微整針劑量穩"},
+      {"id":"xz_31","district":"新莊區","clientType":"prospect","name":"欣妍皮膚科診所","address":"新北市新莊區中原路135號","lat":25.0515,"lng":121.4512,"status":"red","equipment":"評估中","notes":"中原商圈高人氣專科，自費光療與微整針劑量穩"},
       {"id":"xz_32","district":"新莊區","clientType":"prospect","name":"研美學診所","address":"新北市新莊區中央路236號","lat":25.0601,"lng":121.4535,"status":"red","equipment":"評估中","notes":"副都心大道指標高端自費診所，客單價高"},
       {"id":"xz_33","district":"新莊區","clientType":"prospect","name":"風華美學診所（新莊院）","address":"新北市新莊區中華路一段45號","lat":25.0381,"lng":121.4542,"status":"red","equipment":"評估中","notes":"中華路林蔭道旁，主打臉部微整雕塑與緊膚光療"},
       {"id":"xz_34","district":"新莊區","clientType":"prospect","name":"博愛皮膚科診所","address":"新北市新莊區四維路122號","lat":25.0185,"lng":121.4215,"status":"red","equipment":"評估中","notes":"四維市場商圈，門診量體龐大，入門光電客群穩"},
@@ -425,17 +426,32 @@
       {"id":"lk_14","district":"林口區","clientType":"prospect","name":"璞之妍美學診所 (林口院)","address":"新北市林口區文化二路一段372號2樓","lat":25.0728,"lng":121.3708,"status":"red","equipment":"評估中","notes":"頂級非侵入光電體系，主攻原廠高階電波、音波與皮秒"},
       {"id":"lk_15","district":"林口區","clientType":"prospect","name":"林口麗姿診所","address":"新北市林口區文化二路二段128號","lat":25.0832,"lng":121.3782,"status":"red","equipment":"評估中","notes":"家樂福商圈核心，主打微整填充、埋線與私密光電"},
       {"id":"lk_16","district":"林口區","clientType":"prospect","name":"采林皮膚專科診所","address":"新北市林口區民族路33號","lat":25.0695,"lng":121.3638,"status":"red","equipment":"評估中","notes":"鄰近三井Outlet，醫師專業度高，自費雷射轉化率穩"},
-      {"id":"lk_17","district":"林口區","clientType":"prospect","name":"沐光美學診所","address":"新北市林口區忠孝路388號","lat":25.0718,"lng":121.3692,"status":"red","equipment":"評估中","notes":"忠孝路住宅區高質感醫美，主推複合式雷射光療與日常緊緻"}
+      {"id":"lk_17","district":"林口區","clientType":"prospect","name":"沐光美學診所","address":"新北市林口區忠孝路388號","lat":25.0718,"lng":121.3692,"status":"red","equipment":"評估中","notes":"忠孝路住宅區高質感醫美，主推複合式雷射光療與日常緊緻"},
+
+      // 基隆市 (12)
+      {"id":"kl_01","district":"基隆市","clientType":"prospect","name":"基隆葛萊美診所","address":"基隆市中正區義一路23號2樓","lat":25.1315,"lng":121.7458,"status":"red","equipment":"評估中","notes":"義一路指標高質感醫美，主攻雷射光療、微整拉提與體雕"},
+      {"id":"kl_02","district":"基隆市","clientType":"prospect","name":"廖國棟皮膚科診所","address":"基隆市中正區義一路66號","lat":25.1332,"lng":121.7465,"status":"red","equipment":"評估中","notes":"在地老牌權威專科，自費雷射除斑、除皺與基礎微整大院"},
+      {"id":"kl_03","district":"基隆市","clientType":"prospect","name":"陳怡穎皮膚科診所","address":"基隆市中正區義二路65-1號","lat":25.1328,"lng":121.7452,"status":"red","equipment":"評估中","notes":"義二路醫療街熱門專科，自費換膚、痘疤光療與微整注射"},
+      {"id":"kl_04","district":"基隆市","clientType":"prospect","name":"欣美診所 (基隆店)","address":"基隆市仁愛區愛五路34號4樓","lat":25.1285,"lng":121.7455,"status":"red","equipment":"評估中","notes":"連鎖體系分院，主打音波/電波拉提、複合式微整注射與原廠光療"},
+      {"id":"kl_05","district":"基隆市","clientType":"prospect","name":"基隆美詩爾診所","address":"基隆市仁愛區愛三路87號2樓","lat":25.1292,"lng":121.7432,"status":"red","equipment":"評估中","notes":"廟口商圈核心，電波/音波拉提、微整注射與皮秒雷射主力大院"},
+      {"id":"kl_06","district":"基隆市","clientType":"prospect","name":"妮可美麗整形外科診所","address":"基隆市仁愛區仁一路257號","lat":25.1298,"lng":121.7468,"status":"red","equipment":"評估中","notes":"在地老字號手術與自費醫美大院，整形手術與非侵入拉提並行"},
+      {"id":"kl_07","district":"基隆市","clientType":"prospect","name":"江文標皮膚科診所","address":"基隆市仁愛區愛三路120號6樓","lat":25.1288,"lng":121.7428,"status":"red","equipment":"評估中","notes":"老牌專科名院，門診量體龐大，具備穩定自費光電客底"},
+      {"id":"kl_08","district":"基隆市","clientType":"prospect","name":"孫皮膚科診所","address":"基隆市仁愛區愛三路120號3樓","lat":25.1288,"lng":121.7428,"status":"red","equipment":"評估中","notes":"在地資深皮膚科，健保帶動基礎光療與局部微整自費"},
+      {"id":"kl_09","district":"基隆市","clientType":"prospect","name":"基隆長庚醫院美容醫學中心","address":"基隆市安樂區麥金路222號6樓","lat":25.1228,"lng":121.7135,"status":"red","equipment":"評估中","notes":"長庚體系區域重鎮，整外與皮膚專科陣容龐大，耗材規格高"},
+      {"id":"kl_10","district":"基隆市","clientType":"prospect","name":"衛生福利部基隆醫院美容中心","address":"基隆市信義區信二路268號","lat":25.1295,"lng":121.7495,"status":"red","equipment":"評估中","notes":"公立醫院美容醫學中心，光電雷射、除毛與微整微雕兼具"},
+      {"id":"kl_11","district":"基隆市","clientType":"prospect","name":"康美診所 (基隆院)","address":"基隆市信義區深溪路139號2樓","lat":25.1282,"lng":121.7765,"status":"red","equipment":"評估中","notes":"新興商圈自費診所，主攻雷射光療、微整注射與美肌抗老保養"},
+      {"id":"kl_12","district":"基隆市","clientType":"prospect","name":"臺灣礦工醫院醫學美容中心","address":"基隆市暖暖區源遠路282號","lat":25.1055,"lng":121.7492,"status":"red","equipment":"評估中","notes":"區域醫院附設自費美容門診，專注音波拉提、肉毒與除斑雷射"}
     ];
 
     const districtCoords = {
-      'ALL': { center: [25.012, 121.465], zoom: 12 },
+      'ALL': { center: [25.065, 121.555], zoom: 11 },
       '板橋區': { center: [25.0135, 121.4645], zoom: 14 },
       '新莊區': { center: [25.0375, 121.4485], zoom: 14 },
       '中和區': { center: [24.9985, 121.5005], zoom: 14 },
       '永和區': { center: [25.0085, 121.5155], zoom: 15 },
       '三重區': { center: [25.0685, 121.4885], zoom: 14 },
       '林口區': { center: [25.0785, 121.3715], zoom: 14 },
+      '基隆市': { center: [25.1315, 121.7435], zoom: 14 },
       '蘆洲區': { center: [25.0855, 121.4725], zoom: 14 },
       '土城區': { center: [24.9725, 121.4435], zoom: 14 },
       '新店區': { center: [24.9685, 121.5415], zoom: 13 },
@@ -501,6 +517,7 @@
     });
 
     function detectDistrict(addr) {
+      if (addr.includes('基隆')) return '基隆市';
       const districts = ['板橋區', '新莊區', '中和區', '永和區', '三重區', '林口區', '蘆洲區', '土城區', '新店區', '淡水區', '汐止區', '三峽區', '鶯歌區', '樹林區', '泰山區', '五股區', '八里區'];
       for (let d of districts) {
         if (addr.includes(d) || addr.includes(d.replace('區', ''))) return d;
@@ -540,11 +557,23 @@
       document.getElementById('followUpDate').value = `${yyyy}-${mm}-${dd}`;
     };
 
+    window.handleClientTypeChange = function() {
+      const clientType = document.getElementById('clientType').value;
+      const statusGroup = document.getElementById('statusFormGroup');
+      if (clientType === 'existing') {
+        statusGroup.style.display = 'none';
+      } else {
+        statusGroup.style.display = 'block';
+      }
+    };
+
     function getFilteredClinics() {
       return clinics.filter(item => {
+        const isExisting = item.clientType === 'existing';
         const matchDistrict = (currentDistrict === 'ALL') || (item.district === currentDistrict);
         const matchClient = (currentClientType === 'ALL') || (item.clientType === currentClientType);
-        const matchStatus = (currentStatusFilter === 'ALL') || (item.status === currentStatusFilter);
+        const matchStatus = isExisting ? true : ((currentStatusFilter === 'ALL') || (item.status === currentStatusFilter));
+        
         const matchSearch = !searchQuery || 
           (item.name && item.name.toLowerCase().includes(searchQuery)) ||
           (item.address && item.address.toLowerCase().includes(searchQuery)) ||
@@ -568,7 +597,7 @@
         
         const marker = L.circleMarker([item.lat, item.lng], {
           radius: isExisting ? 13 : 11,
-          fillColor: colorMap[item.status] || '#ef4444',
+          fillColor: isExisting ? '#0284c7' : (colorMap[item.status] || '#ef4444'),
           color: isExisting ? '#facc15' : '#ffffff',
           weight: isExisting ? 3.5 : 2,
           opacity: 1,
@@ -576,7 +605,7 @@
         }).addTo(map);
 
         const badgeClass = isExisting ? 'badge-existing' : 'badge-prospect';
-        const badgeLabel = isExisting ? '🤝 既有客戶（耗材/擴機）' : '🎯 陌開客戶（設備拓展）';
+        const badgeLabel = isExisting ? '🤝 既有客戶（常態巡護/擴機）' : '🎯 陌開客戶（設備拓展）';
         const gmapNavUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(item.name + ' ' + item.address)}&travelmode=driving`;
         const gmapSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(item.name + ' ' + (item.district || ''))}`;
 
@@ -595,6 +624,7 @@
               ${followUpText ? `<div style="color: #facc15; font-weight:bold; margin-top:2px;">${followUpText}</div>` : ''}
             </div>
 
+            ${!isExisting ? `<b style="color:#38bdf8;">推進階段：</b>${statusNames[item.status] || item.status}<br>` : ''}
             <b style="color:#38bdf8;">機台/耗材：</b>${item.equipment || '未註明'}<br>
             <b style="color:#38bdf8;">戰情：</b>${item.notes || '無'}<br>
             
@@ -614,23 +644,25 @@
     }
 
     function updateStats(filteredList) {
-      const scopeName = currentDistrict === 'ALL' ? '新北市全區' : currentDistrict;
+      const scopeName = currentDistrict === 'ALL' ? '全責任區' : currentDistrict;
       document.getElementById('currentScopeTitle').innerText = `📍 ${scopeName} 戰情進度`;
       document.getElementById('totalCount').innerHTML = `${filteredList.length} <span>家顯示中</span>`;
       
       const bar = document.getElementById('progressBar');
       bar.innerHTML = '';
-      if (filteredList.length === 0) return;
+      
+      const prospectList = filteredList.filter(c => c.clientType !== 'existing');
+      if (prospectList.length === 0) return;
 
       const counts = { red: 0, yellow: 0, orange: 0, green: 0, purple: 0 };
-      filteredList.forEach(c => counts[c.status] = (counts[c.status] || 0) + 1);
+      prospectList.forEach(c => counts[c.status] = (counts[c.status] || 0) + 1);
 
       for (let s in counts) {
         if (counts[s] > 0) {
           const seg = document.createElement('div');
           seg.className = `prog-${s}`;
-          seg.style.width = `${(counts[s] / filteredList.length) * 100}%`;
-          seg.title = `點擊只看此階段 (${counts[s]} 家)`;
+          seg.style.width = `${(counts[s] / prospectList.length) * 100}%`;
+          seg.title = `陌開階段 (${counts[s]} 家)`;
           seg.onclick = (e) => {
             e.stopPropagation();
             quickFilterStatus(s);
@@ -640,7 +672,6 @@
       }
     }
 
-    /* 📊 匯出 Excel 功能 */
     window.exportToExcel = function() {
       const list = getFilteredClinics();
       if (list.length === 0) {
@@ -652,7 +683,7 @@
         "責任轄區": c.district || "其他",
         "診所名稱": c.name || "",
         "客戶群體": c.clientType === 'existing' ? '🤝 既有客戶(耗材/擴機)' : '🎯 陌開客戶(設備拓展)',
-        "推進階段": statusNames[c.status] || c.status,
+        "推進階段": c.clientType === 'existing' ? '常態巡護/擴機' : (statusNames[c.status] || c.status),
         "地址": c.address || "",
         "現有機台與耗材需求": c.equipment || "未註明",
         "最新情報備忘與策略": c.notes || "無",
@@ -665,11 +696,10 @@
       XLSX.utils.book_append_sheet(workbook, worksheet, "醫美業務戰情報表");
 
       const dateTag = new Date().toISOString().slice(0, 10);
-      const scopeTag = currentDistrict === 'ALL' ? '新北全區' : currentDistrict;
+      const scopeTag = currentDistrict === 'ALL' ? '全責任區' : currentDistrict;
       XLSX.writeFile(workbook, `醫美業務戰情報表_${scopeTag}_${dateTag}.xlsx`);
     };
 
-    /* 📑 匯出 PPT 簡報功能 */
     window.exportToPPT = function() {
       const list = getFilteredClinics();
       if (list.length === 0) {
@@ -680,13 +710,12 @@
       const pptx = new PptxGenJS();
       pptx.layout = 'LAYOUT_16x9';
 
-      const scopeTag = currentDistrict === 'ALL' ? '新北市全區' : currentDistrict;
+      const scopeTag = currentDistrict === 'ALL' ? '全責任區' : currentDistrict;
       const todayTag = new Date().toISOString().slice(0, 10);
 
-      // 第一頁：簡報封面
       const cover = pptx.addSlide();
       cover.background = { color: "0F172A" };
-      cover.addText("新北市醫美拓展戰報", {
+      cover.addText("雙北基醫美拓展戰報", {
         x: 1.0, y: 2.0, w: 8.5, h: 1.2,
         fontSize: 36, bold: true, color: "38BDF8"
       });
@@ -695,7 +724,6 @@
         fontSize: 18, color: "CBD5E1"
       });
 
-      // 後續頁面：每頁放置 2 家診所的高階卡片報告
       for (let i = 0; i < list.length; i += 2) {
         const slide = pptx.addSlide();
         slide.background = { color: "1E293B" };
@@ -705,47 +733,42 @@
           fontSize: 14, color: "94A3B8", bold: true
         });
 
-        // 渲染最多兩張卡片 (左/右配置)
         for (let j = 0; j < 2; j++) {
           const item = list[i + j];
           if (!item) break;
 
           const posX = j === 0 ? 0.8 : 5.2;
+          const isExisting = item.clientType === 'existing';
           
-          // 卡片背景框
           slide.addShape(pptx.ShapeType.roundRect, {
             x: posX, y: 1.0, w: 4.1, h: 4.1,
             fill: { color: "0F172A" },
-            line: { color: "334155", width: 1.5 },
+            line: { color: isExisting ? "FACC15" : "334155", width: isExisting ? 2 : 1.5 },
             rectRadius: 0.1
           });
 
-          // 標題與標籤
-          const clientTypeLabel = item.clientType === 'existing' ? '[🤝 既有客戶]' : '[🎯 陌開客戶]';
+          const clientTypeLabel = isExisting ? '[🤝 既有客戶]' : '[🎯 陌開客戶]';
           slide.addText(`${clientTypeLabel} ${item.name}`, {
             x: posX + 0.2, y: 1.2, w: 3.7, h: 0.6,
-            fontSize: 15, bold: true, color: "38BDF8"
+            fontSize: 15, bold: true, color: isExisting ? "FACC15" : "38BDF8"
           });
 
-          // 階段與地址
-          slide.addText(`推進階段：${statusNames[item.status] || item.status}\n地址：${item.address || '未註明'}`, {
+          const stageText = isExisting ? '常態耗材巡補/擴機評估' : (statusNames[item.status] || item.status);
+          slide.addText(`推進階段：${stageText}\n地址：${item.address || '未註明'}`, {
             x: posX + 0.2, y: 1.8, w: 3.7, h: 0.7,
             fontSize: 11, color: "CBD5E1"
           });
 
-          // 機台資訊
           slide.addText(`現有機台/耗材：\n${item.equipment || '未註明'}`, {
             x: posX + 0.2, y: 2.6, w: 3.7, h: 0.7,
-            fontSize: 11, color: "FACC15", bold: true
+            fontSize: 11, color: "38BDF8", bold: true
           });
 
-          // 戰情報告
           slide.addText(`戰情策略備忘：\n${item.notes || '無'}`, {
             x: posX + 0.2, y: 3.4, w: 3.7, h: 1.0,
             fontSize: 10, color: "E2E8F0"
           });
 
-          // 日期戳記
           const visitInfo = `拜訪日: ${item.lastVisitDate || '未記錄'}  |  預計複訪: ${item.followUpDate || '未設定'}`;
           slide.addText(visitInfo, {
             x: posX + 0.2, y: 4.6, w: 3.7, h: 0.4,
@@ -767,9 +790,11 @@
       document.getElementById('clientType').value = target.clientType || 'prospect';
       document.getElementById('name').value = target.name;
       document.getElementById('address').value = target.address;
-      document.getElementById('status').value = target.status;
+      document.getElementById('status').value = target.status || 'red';
       document.getElementById('equipment').value = target.equipment || '';
       document.getElementById('notes').value = target.notes || '';
+
+      handleClientTypeChange();
 
       document.getElementById('formTitle').innerText = `✏️ 編輯：${target.name}`;
       document.getElementById('cancelEditBtn').style.display = 'block';
@@ -785,6 +810,7 @@
       document.getElementById('editingId').value = '';
       document.getElementById('lastVisitDate').value = '';
       document.getElementById('clinicForm').reset();
+      handleClientTypeChange();
       document.getElementById('formTitle').innerText = '⚔️ 建立與維護目標';
       document.getElementById('cancelEditBtn').style.display = 'none';
 
@@ -815,7 +841,7 @@
             name: name,
             address: address,
             district: detectedDistrict,
-            status: document.getElementById('status').value,
+            status: clientType === 'existing' ? 'purple' : document.getElementById('status').value,
             equipment: document.getElementById('equipment').value,
             notes: document.getElementById('notes').value,
             lastVisitDate: todayStr,
@@ -849,7 +875,7 @@
             address: address,
             lat: lat,
             lng: lng,
-            status: document.getElementById('status').value,
+            status: clientType === 'existing' ? 'purple' : document.getElementById('status').value,
             equipment: document.getElementById('equipment').value,
             notes: document.getElementById('notes').value,
             lastVisitDate: todayStr,
@@ -866,7 +892,7 @@
           map.setView([lat, lng], 16);
           e.target.reset();
         } else {
-          alert('找不到這個地址，請確認有填寫新北市與行政區！');
+          alert('找不到這個地址，請確認有填寫行政區與正確路名！');
         }
       } catch (err) {
         alert('連線失敗，請檢查網路連線。');
