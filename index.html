@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>新北市醫美陌開戰情室 - 雲端即時同步版</title>
+  <title>新北市醫美戰情室 - 雙軌業務與即時搜尋版</title>
   
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -19,50 +19,61 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
     body { display: flex; height: 100vh; overflow: hidden; background: #0f172a; color: #f8fafc; }
-    #sidebar { width: 400px; height: 100%; overflow-y: auto; background: #1e293b; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.5); z-index: 1000; flex-shrink: 0; }
+    #sidebar { width: 420px; height: 100%; overflow-y: auto; background: #1e293b; padding: 18px; box-shadow: 2px 0 10px rgba(0,0,0,0.5); z-index: 1000; flex-shrink: 0; }
     #map { flex: 1; height: 100%; }
     
-    .dashboard { background: #0f172a; padding: 16px; border-radius: 12px; margin-bottom: 16px; border: 1px solid #334155; }
-    .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-    .dash-title { font-size: 13px; color: #94a3b8; }
+    /* 搜尋與篩選器控制面板 */
+    .control-panel { background: #0f172a; padding: 14px; border-radius: 12px; margin-bottom: 14px; border: 1px solid #334155; }
+    .search-box { position: relative; margin-bottom: 10px; }
+    .search-input { width: 100%; padding: 9px 12px 9px 32px; background: #1e293b; border: 1px solid #475569; border-radius: 6px; color: white; font-size: 13px; }
+    .search-input:focus { outline: none; border-color: #38bdf8; }
+    .search-icon { position: absolute; left: 10px; top: 10px; font-size: 13px; color: #94a3b8; }
+    
+    .filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 6px; }
+    .filter-select { width: 100%; padding: 7px 10px; background: #1e293b; border: 1px solid #475569; border-radius: 6px; color: white; font-size: 13px; font-weight: bold; cursor: pointer; }
+
+    /* 戰情進度看板 */
+    .dashboard { background: #0f172a; padding: 14px; border-radius: 12px; margin-bottom: 14px; border: 1px solid #334155; }
+    .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .dash-title { font-size: 12px; color: #94a3b8; }
     .dash-sync { font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #065f46; color: #34d399; font-weight: bold; }
-    .dash-score { font-size: 24px; font-weight: bold; color: #38bdf8; display: flex; align-items: baseline; gap: 8px; }
-    .dash-score span { font-size: 13px; color: #64748b; font-weight: normal; }
-    .progress-bar { width: 100%; height: 8px; background: #334155; border-radius: 4px; overflow: hidden; margin-top: 10px; display: flex; }
+    .dash-score { font-size: 22px; font-weight: bold; color: #38bdf8; display: flex; align-items: baseline; gap: 6px; }
+    .dash-score span { font-size: 12px; color: #64748b; font-weight: normal; }
+    .progress-bar { width: 100%; height: 7px; background: #334155; border-radius: 4px; overflow: hidden; margin-top: 8px; display: flex; }
     .prog-yellow { background: #eab308; }
     .prog-orange { background: #f97316; }
     .prog-green { background: #22c55e; }
     .prog-purple { background: #a855f7; }
     .prog-red { background: #ef4444; }
 
-    .filter-box { background: #0f172a; padding: 12px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #38bdf8; }
-    .filter-box label { font-size: 12px; font-weight: bold; color: #38bdf8; text-transform: uppercase; margin-bottom: 6px; display: block; }
-    .filter-select { width: 100%; padding: 8px 12px; background: #1e293b; border: 1px solid #475569; border-radius: 6px; color: white; font-size: 14px; font-weight: bold; cursor: pointer; }
-
-    .form-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-    h2 { font-size: 16px; color: #f1f5f9; border-left: 3px solid #38bdf8; padding-left: 8px; margin: 0; }
+    /* 表單區塊 */
+    .form-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    h2 { font-size: 15px; color: #f1f5f9; border-left: 3px solid #38bdf8; padding-left: 8px; margin: 0; }
     .cancel-edit-btn { background: #475569; color: #cbd5e1; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; display: none; }
-    .cancel-edit-btn:hover { background: #64748b; color: white; }
 
-    .form-group { margin-bottom: 10px; }
-    label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 3px; }
-    input, select, textarea { width: 100%; padding: 8px 10px; background: #334155; border: 1px solid #475569; border-radius: 6px; color: white; font-size: 13px; }
+    .form-group { margin-bottom: 9px; }
+    label { display: block; font-size: 11px; color: #94a3b8; margin-bottom: 2px; }
+    input, select, textarea { width: 100%; padding: 7px 9px; background: #334155; border: 1px solid #475569; border-radius: 6px; color: white; font-size: 13px; }
     input:focus, select:focus, textarea:focus { outline: none; border-color: #38bdf8; }
-    button.btn-primary { width: 100%; padding: 10px; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 6px; }
+    button.btn-primary { width: 100%; padding: 10px; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 4px; }
     button.btn-primary:hover { background: #1d4ed8; }
     button.btn-update { background: #16a34a !important; }
-    button.btn-update:hover { background: #15803d !important; }
     button:disabled { background: #64748b; cursor: not-allowed; }
 
-    .legend { margin-top: 16px; border-top: 1px solid #334155; padding-top: 12px; font-size: 12px; }
-    .legend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
-    .legend-item { display: flex; align-items: center; gap: 6px; color: #cbd5e1; }
-    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    /* 圖例說明 */
+    .legend { margin-top: 14px; border-top: 1px solid #334155; padding-top: 10px; font-size: 11px; }
+    .legend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 6px; }
+    .legend-item { display: flex; align-items: center; gap: 5px; color: #cbd5e1; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 
+    /* 彈窗排版 */
     .leaflet-popup-content-wrapper { background: #1e293b; color: #f1f5f9; border-radius: 8px; }
     .leaflet-popup-tip { background: #1e293b; }
-    .popup-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
-    .popup-btn { text-align: center; border: none; padding: 6px 4px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 4px; }
+    .client-badge { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-bottom: 4px; }
+    .badge-prospect { background: #0369a1; color: #bae6fd; }
+    .badge-existing { background: #854d0e; color: #fef08a; }
+    .popup-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 8px; }
+    .popup-btn { text-align: center; border: none; padding: 5px 3px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 3px; }
 
     @media (max-width: 768px) {
       body { flex-direction: column-reverse; }
@@ -74,34 +85,61 @@
 <body>
 
   <div id="sidebar">
-    <div class="filter-box">
-      <label>🎯 當前檢視轄區</label>
-      <select id="districtFilter" class="filter-select" onchange="filterDistrict()">
-        <option value="ALL">🌐 新北市全區</option>
-        <option value="板橋區">板橋區</option>
-        <option value="新莊區">新莊區</option>
-        <option value="中和區">中和區</option>
-        <option value="永和區">永和區</option>
-        <option value="三重區">三重區</option>
-        <option value="蘆洲區">蘆洲區</option>
-        <option value="土城區">土城區</option>
-        <option value="新店區">新店區</option>
-        <option value="汐止區">汐止區</option>
-        <option value="其他">其他區域</option>
-      </select>
+    <!-- 搜尋與篩選 -->
+    <div class="control-panel">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" class="search-input" placeholder="搜尋診所、地址或機台關鍵字..." oninput="handleSearch()">
+      </div>
+      <div class="filter-row">
+        <div>
+          <label>客群維度</label>
+          <select id="clientTypeFilter" class="filter-select" onchange="applyFilters()">
+            <option value="ALL">全部客戶群體</option>
+            <option value="prospect">🎯 陌開客戶（主攻設備）</option>
+            <option value="existing">🤝 既有客戶（耗材/擴機）</option>
+          </select>
+        </div>
+        <div>
+          <label>行政責任轄區</label>
+          <select id="districtFilter" class="filter-select" onchange="applyFilters(true)">
+            <option value="ALL">🌐 新北市全區</option>
+            <option value="板橋區">板橋區</option>
+            <option value="新莊區">新莊區</option>
+            <option value="中和區">中和區</option>
+            <option value="永和區">永和區</option>
+            <option value="三重區">三重區</option>
+            <option value="蘆洲區">蘆洲區</option>
+            <option value="土城區">土城區</option>
+            <option value="新店區">新店區</option>
+            <option value="林口區">林口區</option>
+            <option value="淡水區">淡水區</option>
+            <option value="汐止區">汐止區</option>
+            <option value="三峽區">三峽區</option>
+            <option value="鶯歌區">鶯歌區</option>
+            <option value="樹林區">樹林區</option>
+            <option value="泰山區">泰山區</option>
+            <option value="五股區">五股區</option>
+            <option value="八里區">八里區</option>
+            <option value="其他">其他區域</option>
+          </select>
+        </div>
+      </div>
     </div>
 
+    <!-- 戰情儀表板 -->
     <div class="dashboard">
       <div class="dash-header">
-        <div class="dash-title" id="currentScopeTitle">📍 板橋區解鎖度</div>
-        <div class="dash-sync" id="syncStatus">🟢 雲端同步中</div>
+        <div class="dash-title" id="currentScopeTitle">📍 板橋區戰情進度</div>
+        <div class="dash-sync" id="syncStatus">🟢 雲端同步完成</div>
       </div>
-      <div class="dash-score" id="totalCount">0 <span>家已插旗</span></div>
+      <div class="dash-score" id="totalCount">0 <span>家顯示中</span></div>
       <div class="progress-bar" id="progressBar"></div>
     </div>
 
+    <!-- 目標建檔與情報更新 -->
     <div class="form-header">
-      <h2 id="formTitle">⚔️ 登記探勘目標</h2>
+      <h2 id="formTitle">⚔️ 建立與維護目標</h2>
       <button type="button" id="cancelEditBtn" class="cancel-edit-btn" onclick="resetFormToCreate()">取消編輯</button>
     </div>
 
@@ -109,42 +147,52 @@
       <input type="hidden" id="editingId" value="">
 
       <div class="form-group">
+        <label>客戶屬性</label>
+        <select id="clientType">
+          <option value="prospect">🎯 陌開客戶（主攻設備推展）</option>
+          <option value="existing">🤝 既有客戶（耗材巡補 / 擴機需求）</option>
+        </select>
+      </div>
+
+      <div class="form-group">
         <label>診所名稱</label>
-        <input type="text" id="name" placeholder="例如：書拉密美學診所" required>
+        <input type="text" id="name" placeholder="例如：板橋光澤診所" required>
       </div>
       <div class="form-group">
         <label>診所地址</label>
-        <input type="text" id="address" placeholder="例如：新北市板橋區中山路一段69號6樓之1" required>
+        <input type="text" id="address" placeholder="例如：新北市板橋區館前東路2號" required>
       </div>
       <div class="form-group">
-        <label>征服進度（色號）</label>
+        <label>推進階段（戰情色號）</label>
         <select id="status">
-          <option value="red">🔴 未拜訪 / 遭防禦</option>
-          <option value="yellow">🟡 探路中（摸底/留DM）</option>
-          <option value="orange">🟠 約訪中（拿到窗口/LINE）</option>
-          <option value="green">🟢 談判中（見院長/評估機台）</option>
-          <option value="purple">🟣 已征服（成功簽約合作）</option>
+          <option value="red">🔴 未探勘 / 迷霧防禦</option>
+          <option value="yellow">🟡 初訪摸底（DM留置/競品盤點）</option>
+          <option value="orange">🟠 鎖定對話（取得院長/店長窗口）</option>
+          <option value="green">🟢 評估試機（DEMO/提報報價）</option>
+          <option value="purple">🟣 合作結案（已成交/常態維護）</option>
         </select>
       </div>
       <div class="form-group">
-        <label>現有機台 / 競品設備</label>
-        <input type="text" id="equipment" placeholder="例如：海芙三代、玩美電波、美音">
+        <label>現有機台 / 競品與耗材需求</label>
+        <input type="text" id="equipment" placeholder="例如：海芙三代、玩美電波、探頭耗材量大">
       </div>
       <div class="form-group">
-        <label>情報備忘與下一步行動</label>
-        <textarea id="notes" rows="3" placeholder="例如：店長不在，已加官方LINE約訪"></textarea>
+        <label>戰情情報與下一步策略</label>
+        <textarea id="notes" rows="3" placeholder="例如：店長已換人，下週二預約提報新機台"></textarea>
       </div>
-      <button type="submit" id="submitBtn" class="btn-primary">定位並存入雲端</button>
+      <button type="submit" id="submitBtn" class="btn-primary">定位並同步至雲端</button>
     </form>
 
+    <!-- 圖例說明 -->
     <div class="legend">
-      <div style="font-weight: bold; margin-bottom: 4px; color:#94a3b8;">戰情色標：</div>
+      <div style="font-weight: bold; margin-bottom: 4px; color:#94a3b8;">階段色標與圖例：</div>
       <div class="legend-grid">
-        <div class="legend-item"><span class="dot" style="background: #ef4444;"></span> 未拜訪 / 迷霧</div>
-        <div class="legend-item"><span class="dot" style="background: #eab308;"></span> 探路中 (摸清設備)</div>
-        <div class="legend-item"><span class="dot" style="background: #f97316;"></span> 約訪中 (取得對話)</div>
-        <div class="legend-item"><span class="dot" style="background: #22c55e;"></span> 談判中 (已見決策者)</div>
-        <div class="legend-item"><span class="dot" style="background: #a855f7;"></span> 已征服 (成功結案)</div>
+        <div class="legend-item"><span class="dot" style="background: #ef4444;"></span> 🔴 未探勘/迷霧</div>
+        <div class="legend-item"><span class="dot" style="background: #eab308;"></span> 🟡 初訪摸底</div>
+        <div class="legend-item"><span class="dot" style="background: #f97316;"></span> 🟠 鎖定對話窗口</div>
+        <div class="legend-item"><span class="dot" style="background: #22c55e;"></span> 🟢 評估試機/報價</div>
+        <div class="legend-item"><span class="dot" style="background: #a855f7;"></span> 🟣 合作結案/維護</div>
+        <div class="legend-item"><span style="display:inline-block; width:10px; height:10px; border:2px solid #facc15; border-radius:50%;"></span> 金框：既有客戶</div>
       </div>
     </div>
   </div>
@@ -166,49 +214,7 @@
     const db = firebase.database();
     const clinicsRef = db.ref('clinics');
 
-    const initialVerifiedClinics = [
-      {"id":"c1","district":"新莊區","name":"馨田診所","address":"新北市新莊區思源路516號","lat":25.05553,"lng":121.46024,"status":"yellow","equipment":"海芙三代","notes":"主管不在，先留資料給窗口，目前使用海3。"},
-      {"id":"c2","district":"新莊區","name":"丰森醫美","address":"新北市新莊區思源路420號","lat":25.05325,"lng":121.46011,"status":"orange","equipment":"美國音波二代、媚必提","notes":"店長不在，櫃檯表示先加官方LINE約訪。"},
-      {"id":"bq_01","district":"板橋區","name":"板橋光澤診所","address":"新北市板橋區館前東路2號","lat":25.0075,"lng":121.4619,"status":"red","equipment":"評估中","notes":"光澤旗艦大本營，光電與微整主力院所"},
-      {"id":"bq_02","district":"板橋區","name":"淨妍醫美診所 (板橋分院)","address":"新北市板橋區重慶路8號3樓","lat":25.0089,"lng":121.4597,"status":"red","equipment":"評估中","notes":"連鎖大院，音波與微整量極大"},
-      {"id":"bq_03","district":"板橋區","name":"星和診所 (板橋)","address":"新北市板橋區中山路一段67號4樓","lat":25.0112,"lng":121.4623,"status":"red","equipment":"評估中","notes":"星醫美學連鎖核心院所"},
-      {"id":"bq_04","district":"板橋區","name":"元晨診所 (板橋店)","address":"新北市板橋區中山路一段69號8樓","lat":25.0113,"lng":121.4625,"status":"red","equipment":"評估中","notes":"府中商圈主力自費微整"},
-      {"id":"bq_05","district":"板橋區","name":"書拉密美學診所 (板橋府中)","address":"新北市板橋區中山路一段69號6樓之1","lat":25.0113,"lng":121.4625,"status":"red","equipment":"評估中","notes":"府中商圈自費微整光電"},
-      {"id":"bq_06","district":"板橋區","name":"樂菲整形外科診所","address":"新北市板橋區中山路一段15號3樓","lat":25.0094,"lng":121.4595,"status":"red","equipment":"評估中","notes":"府中站星巴克樓上手術與微整"},
-      {"id":"bq_07","district":"板橋區","name":"宏益信合美診所","address":"新北市板橋區新民街37號3樓","lat":25.0128,"lng":121.4665,"status":"red","equipment":"評估中","notes":"周林興院長，整形外科與微整兼營"},
-      {"id":"bq_08","district":"板橋區","name":"趙昭明皮膚科診所","address":"新北市板橋區南門街27號","lat":25.0088,"lng":121.4578,"status":"red","equipment":"評估中","notes":"權威名醫大院，門診量體極大"},
-      {"id":"bq_09","district":"板橋區","name":"童話皮膚專科診所","address":"新北市板橋區縣民大道一段295號","lat":25.0118,"lng":121.4552,"status":"red","equipment":"評估中","notes":"新板特區高階原廠光電大院"},
-      {"id":"bq_10","district":"板橋區","name":"劉思楨許永川皮膚科診所","address":"新北市板橋區民族路60號","lat":25.0091,"lng":121.4658,"status":"red","equipment":"評估中","notes":"板橋指標老字號皮膚科大院"},
-      {"id":"bq_11","district":"板橋區","name":"久明診所 (板橋總院)","address":"新北市板橋區文化路一段137號3樓","lat":25.0162,"lng":121.4631,"status":"red","equipment":"評估中","notes":"楊勝君院長，板橋指標醫美大院"},
-      {"id":"bq_12","district":"板橋區","name":"美麗爾美學眼科診所 (板橋店)","address":"新北市板橋區文化路一段145號2樓","lat":25.0166,"lng":121.4635,"status":"red","equipment":"評估中","notes":"陳美齡醫師體系，光電微整大戶"},
-      {"id":"bq_13","district":"板橋區","name":"張英睿皮膚專科診所","address":"新北市板橋區文化路一段118號","lat":25.0156,"lng":121.4628,"status":"red","equipment":"評估中","notes":"高階光電微整指標皮膚專科"},
-      {"id":"bq_14","district":"板橋區","name":"信曜皮膚科診所","address":"新北市板橋區文化路一段218號","lat":25.0195,"lng":121.4655,"status":"red","equipment":"評估中","notes":"文化路主要自費/健保皮膚科"},
-      {"id":"bq_15","district":"板橋區","name":"熠美時尚醫美診所","address":"新北市板橋區文化路一段351號2樓","lat":25.0222,"lng":121.4676,"status":"red","equipment":"評估中","notes":"新埔商圈自費微整光電"},
-      {"id":"bq_16","district":"板橋區","name":"尚品皮膚科診所","address":"新北市板橋區文化路一段419-1號","lat":25.0232,"lng":121.4695,"status":"red","equipment":"評估中","notes":"新埔捷運出口旁自費微整"},
-      {"id":"bq_17","district":"板橋區","name":"采醫璟麗診所","address":"新北市板橋區民生路二段209號","lat":25.0223,"lng":121.4678,"status":"red","equipment":"評估中","notes":"新埔捷運站2號出口旁"},
-      {"id":"bq_18","district":"板橋區","name":"莘美醫診所 (欣莘時尚美學)","address":"新北市板橋區民生路二段240巷14號3樓","lat":25.0228,"lng":121.4682,"status":"red","equipment":"評估中","notes":"新埔馥華大樓，體雕抽脂拉提"},
-      {"id":"bq_19","district":"板橋區","name":"吳峰璋皮膚科診所","address":"新北市板橋區民生路二段229號","lat":25.0226,"lng":121.4675,"status":"red","equipment":"評估中","notes":"新埔站老牌皮膚科診所"},
-      {"id":"bq_20","district":"板橋區","name":"黃皮膚科診所","address":"新北市板橋區文化路二段10號","lat":25.0258,"lng":121.4721,"status":"red","equipment":"評估中","notes":"江子翠門診量體極大院所"},
-      {"id":"bq_21","district":"板橋區","name":"耀美醫美診所","address":"新北市板橋區文化路二段133號","lat":25.0275,"lng":121.4735,"status":"red","equipment":"評估中","notes":"江子翠捷運生活圈自費醫美"},
-      {"id":"bq_22","district":"板橋區","name":"劉仲彥皮膚專科診所","address":"新北市板橋區雙十路二段167號","lat":25.0292,"lng":121.4755,"status":"red","equipment":"評估中","notes":"江子翠指標皮膚專科，口碑佳"},
-      {"id":"bq_23","district":"板橋區","name":"江致德皮膚科診所","address":"新北市板橋區雙十路二段42-4號","lat":25.0281,"lng":121.4741,"status":"red","equipment":"評估中","notes":"江子翠雙十路商圈"},
-      {"id":"bq_24","district":"板橋區","name":"板橋四維皮膚科診所","address":"新北市板橋區四維路150號2樓","lat":25.0261,"lng":121.4641,"status":"red","equipment":"評估中","notes":"新埔商圈指標皮膚科，星和聯盟"},
-      {"id":"bq_25","district":"板橋區","name":"喬美整形外科診所","address":"新北市板橋區漢生東路178號2樓","lat":25.0135,"lng":121.4705,"status":"red","equipment":"評估中","notes":"長庚團隊主持，整形與微整"},
-      {"id":"bq_26","district":"板橋區","name":"京澄皮膚專科診所","address":"新北市板橋區三民路一段183號","lat":25.0195,"lng":121.4815,"status":"red","equipment":"評估中","notes":"埔墘三民路高質感皮膚專科，有微整自費"},
-      {"id":"bq_27","district":"板橋區","name":"大鈞醫學美容中心","address":"新北市板橋區中山路二段88號3樓","lat":25.0168,"lng":121.4795,"status":"red","equipment":"評估中","notes":"埔墘商圈指標大型醫美中心"},
-      {"id":"bq_28","district":"板橋區","name":"皮醫師皮膚專科診所","address":"新北市板橋區中山路二段172號","lat":25.0179,"lng":121.4815,"status":"red","equipment":"評估中","notes":"埔墘商圈自費微整光電"},
-      {"id":"bq_29","district":"板橋區","name":"曾皮膚科診所","address":"新北市板橋區中山路二段365號","lat":25.0188,"lng":121.4858,"status":"red","equipment":"評估中","notes":"埔墘在地老牌皮膚專科"},
-      {"id":"bq_30","district":"板橋區","name":"何文藻皮膚科診所","address":"新北市板橋區三民路二段32號","lat":25.0125,"lng":121.4812,"status":"red","equipment":"評估中","notes":"三民路家樂福商圈"},
-      {"id":"bq_31","district":"板橋區","name":"法邑極緻美學診所","address":"新北市板橋區四川路二段107號","lat":24.9968,"lng":121.4485,"status":"red","equipment":"評估中","notes":"亞東生活圈高質感微整光電"},
-      {"id":"bq_32","district":"板橋區","name":"雅丰美膚診所 (板橋)","address":"新北市板橋區四川路一段326號","lat":25.0015,"lng":121.4528,"status":"red","equipment":"評估中","notes":"雅丰體系分院，抗老拉提大戶"},
-      {"id":"bq_33","district":"板橋區","name":"研知診所","address":"新北市板橋區文化路二段330號","lat":25.0315,"lng":121.4782,"status":"red","equipment":"評估中","notes":"江子翠整棟1~4樓自費光電拉提大院"},
-      {"id":"bq_34","district":"板橋區","name":"靚世紀醫美診所 (板橋總院)","address":"新北市板橋區民族路34巷18號2樓","lat":25.0098,"lng":121.4635,"status":"red","equipment":"評估中","notes":"老牌連鎖遷址新點，光電與微整耗材量大"},
-      {"id":"bq_35","district":"板橋區","name":"尚水美博醫美診所","address":"新北市板橋區文化路一段145號3樓之1","lat":25.0166,"lng":121.4635,"status":"red","equipment":"評估中","notes":"新埔站旁，主攻眼整外、拉皮與微整光電"},
-      {"id":"bq_36","district":"板橋區","name":"秋泉診所 (秋泉醫美)","address":"新北市板橋區四川路二段105號","lat":24.9968,"lng":121.4484,"status":"red","equipment":"評估中","notes":"亞東生活圈戴醫師主持，自費醫美光療"},
-      {"id":"bq_37","district":"板橋區","name":"維格皮膚科診所 (新埔)","address":"新北市板橋區民生路二段251號3樓","lat":25.0235,"lng":121.4685,"status":"red","equipment":"評估中","notes":"維格體系板橋據點，高階光電與微整大戶"},
-      {"id":"bq_38","district":"板橋區","name":"板橋美麗爾診所 (府中)","address":"新北市板橋區中山路一段19號4樓之1","lat":25.0096,"lng":121.4598,"status":"red","equipment":"評估中","notes":"府中站旁美麗爾分院，微整光電重鎮"}
-    ];
-
+    // 新北全 29 區座標配置
     const districtCoords = {
       'ALL': { center: [25.012, 121.465], zoom: 12 },
       '板橋區': { center: [25.0135, 121.4645], zoom: 14 },
@@ -219,11 +225,16 @@
       '蘆洲區': { center: [25.0855, 121.4725], zoom: 14 },
       '土城區': { center: [24.9725, 121.4435], zoom: 14 },
       '新店區': { center: [24.9685, 121.5415], zoom: 13 },
-      '汐止區': { center: [25.0655, 121.6565], zoom: 13 }
+      '林口區': { center: [25.0785, 121.3715], zoom: 14 },
+      '淡水區': { center: [25.1725, 121.4435], zoom: 13 },
+      '汐止區': { center: [25.0655, 121.6565], zoom: 13 },
+      '三峽區': { center: [24.9335, 121.3735], zoom: 13 },
+      '鶯歌區': { center: [24.9545, 121.3555], zoom: 14 },
+      '樹林區': { center: [24.9915, 121.4245], zoom: 14 },
+      '泰山區': { center: [25.0585, 121.4315], zoom: 14 },
+      '五股區': { center: [25.0835, 121.4385], zoom: 14 },
+      '八里區': { center: [25.1485, 121.3985], zoom: 13 }
     };
-
-    let clinics = [];
-    let currentFilter = '板橋區';
 
     const colorMap = {
       red: '#ef4444',
@@ -233,68 +244,96 @@
       purple: '#a855f7'
     };
 
+    let clinics = [];
+    let currentDistrict = '板橋區';
+    let currentClientType = 'ALL';
+    let searchQuery = '';
+    let markers = [];
+
     const map = L.map('map').setView([25.0135, 121.4645], 14);
     L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    let markers = [];
-
+    // 監聽 Firebase 雲端即時同步
     clinicsRef.on('value', (snapshot) => {
       const data = snapshot.val();
-      if (!data) {
-        initialVerifiedClinics.forEach(c => {
-          clinicsRef.child(c.id).set(c);
-        });
-        return;
+      if (data) {
+        clinics = Object.values(data).map(item => ({
+          ...item,
+          clientType: item.clientType || 'prospect' // 預設歸類為陌開客戶
+        }));
+        renderMap();
+        document.getElementById('syncStatus').innerText = '🟢 雲端同步完成';
       }
-      clinics = Object.values(data);
-      renderMap();
-      document.getElementById('syncStatus').innerText = '🟢 雲端同步完成';
-    }, (error) => {
-      document.getElementById('syncStatus').innerText = '🔴 連線異常';
-      console.error(error);
     });
 
     function detectDistrict(addr) {
-      const districts = ['板橋區', '新莊區', '中和區', '永和區', '三重區', '蘆洲區', '土城區', '新店區', '汐止區', '樹林區', '三峽區', '鶯歌區', '林口區', '五股區', '泰山區', '淡水區'];
+      const districts = ['板橋區', '新莊區', '中和區', '永和區', '三重區', '蘆洲區', '土城區', '新店區', '林口區', '淡水區', '汐止區', '三峽區', '鶯歌區', '樹林區', '泰山區', '五股區', '八里區'];
       for (let d of districts) {
-        if (addr.includes(d) || addr.includes(d.replace('區', ''))) {
-          return d;
-        }
+        if (addr.includes(d) || addr.includes(d.replace('區', ''))) return d;
       }
       return '其他';
+    }
+
+    function handleSearch() {
+      searchQuery = document.getElementById('searchInput').value.trim().toLowerCase();
+      renderMap();
+    }
+
+    function applyFilters(shouldFly = false) {
+      currentDistrict = document.getElementById('districtFilter').value;
+      currentClientType = document.getElementById('clientTypeFilter').value;
+      renderMap();
+
+      if (shouldFly && districtCoords[currentDistrict]) {
+        map.flyTo(districtCoords[currentDistrict].center, districtCoords[currentDistrict].zoom, { duration: 1.2 });
+      }
     }
 
     function renderMap() {
       markers.forEach(m => map.removeLayer(m));
       markers = [];
 
-      const visibleClinics = currentFilter === 'ALL' 
-        ? clinics 
-        : clinics.filter(c => c.district === currentFilter);
+      const filtered = clinics.filter(item => {
+        const matchDistrict = (currentDistrict === 'ALL') || (item.district === currentDistrict);
+        const matchClient = (currentClientType === 'ALL') || (item.clientType === currentClientType);
+        const matchSearch = !searchQuery || 
+          (item.name && item.name.toLowerCase().includes(searchQuery)) ||
+          (item.address && item.address.toLowerCase().includes(searchQuery)) ||
+          (item.equipment && item.equipment.toLowerCase().includes(searchQuery)) ||
+          (item.notes && item.notes.toLowerCase().includes(searchQuery));
 
-      visibleClinics.forEach(item => {
+        return matchDistrict && matchClient && matchSearch;
+      });
+
+      filtered.forEach(item => {
+        const isExisting = item.clientType === 'existing';
+        
+        // 既有客戶使用金色粗邊框標示，陌開客戶使用純白邊框
         const marker = L.circleMarker([item.lat, item.lng], {
-          radius: 12,
+          radius: isExisting ? 13 : 11,
           fillColor: colorMap[item.status] || '#ef4444',
-          color: '#ffffff',
-          weight: 2,
+          color: isExisting ? '#facc15' : '#ffffff',
+          weight: isExisting ? 3.5 : 2,
           opacity: 1,
-          fillOpacity: 0.9
+          fillOpacity: 0.95
         }).addTo(map);
 
+        const badgeClass = isExisting ? 'badge-existing' : 'badge-prospect';
+        const badgeLabel = isExisting ? '🤝 既有客戶（耗材/擴機）' : '🎯 陌開客戶（設備拓展）';
         const gmapNavUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(item.name + ' ' + item.address)}&travelmode=driving`;
-        const gmapSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(item.name + ' ' + (item.district || '板橋'))}`;
+        const gmapSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(item.name + ' ' + (item.district || ''))}`;
 
         const popupContent = `
-          <div style="font-size:14px; min-width: 220px;">
+          <div style="font-size:13px; min-width: 220px;">
+            <span class="client-badge ${badgeClass}">${badgeLabel}</span>
             <div style="font-size:11px; color:#38bdf8; font-weight:bold;">${item.district || '新北市'}</div>
-            <strong style="font-size:16px;">${item.name}</strong><br>
+            <strong style="font-size:15px;">${item.name}</strong><br>
             <span style="font-size:12px; color:#94a3b8;">${item.address || ''}</span><br>
-            <b style="color:#38bdf8;">設備：</b>${item.equipment || '未填'}<br>
-            <b style="color:#38bdf8;">情報：</b>${item.notes || '無'}<br>
+            <b style="color:#38bdf8;">機台/耗材：</b>${item.equipment || '未註明'}<br>
+            <b style="color:#38bdf8;">戰情：</b>${item.notes || '無'}<br>
             
             <div class="popup-btn-row">
               <button class="popup-btn" onclick="startEditClinic('${item.id}')" style="background:#2563eb; color:white;">✏️ 編輯情報</button>
@@ -308,13 +347,13 @@
         markers.push(marker);
       });
 
-      updateStats(visibleClinics);
+      updateStats(filtered);
     }
 
     function updateStats(filteredList) {
-      const scopeName = currentFilter === 'ALL' ? '新北市全區' : currentFilter;
-      document.getElementById('currentScopeTitle').innerText = `📍 ${scopeName}解鎖度`;
-      document.getElementById('totalCount').innerHTML = `${filteredList.length} <span>家目標</span>`;
+      const scopeName = currentDistrict === 'ALL' ? '新北市全區' : currentDistrict;
+      document.getElementById('currentScopeTitle').innerText = `📍 ${scopeName} 戰情進度`;
+      document.getElementById('totalCount').innerHTML = `${filteredList.length} <span>家顯示中</span>`;
       
       const bar = document.getElementById('progressBar');
       bar.innerHTML = '';
@@ -338,42 +377,32 @@
       if (!target) return;
 
       document.getElementById('editingId').value = target.id;
+      document.getElementById('clientType').value = target.clientType || 'prospect';
       document.getElementById('name').value = target.name;
       document.getElementById('address').value = target.address;
       document.getElementById('status').value = target.status;
       document.getElementById('equipment').value = target.equipment || '';
       document.getElementById('notes').value = target.notes || '';
 
-      document.getElementById('formTitle').innerText = `✏️ 正在編輯：${target.name}`;
+      document.getElementById('formTitle').innerText = `✏️ 編輯：${target.name}`;
       document.getElementById('cancelEditBtn').style.display = 'block';
 
       const submitBtn = document.getElementById('submitBtn');
       submitBtn.innerText = '💾 儲存並同步至雲端';
       submitBtn.classList.add('btn-update');
 
-      document.getElementById('sidebar').scrollTop = 120;
+      document.getElementById('sidebar').scrollTop = 160;
     };
 
     window.resetFormToCreate = function() {
       document.getElementById('editingId').value = '';
       document.getElementById('clinicForm').reset();
-      document.getElementById('formTitle').innerText = '⚔️ 登記探勘目標';
+      document.getElementById('formTitle').innerText = '⚔️ 建立與維護目標';
       document.getElementById('cancelEditBtn').style.display = 'none';
 
       const submitBtn = document.getElementById('submitBtn');
-      submitBtn.innerText = '定位並存入雲端';
+      submitBtn.innerText = '定位並同步至雲端';
       submitBtn.classList.remove('btn-update');
-    };
-
-    window.filterDistrict = function() {
-      currentFilter = document.getElementById('districtFilter').value;
-      renderMap();
-
-      if (districtCoords[currentFilter]) {
-        map.flyTo(districtCoords[currentFilter].center, districtCoords[currentFilter].zoom, {
-          duration: 1.2
-        });
-      }
     };
 
     document.getElementById('clinicForm').addEventListener('submit', async (e) => {
@@ -382,6 +411,7 @@
       const submitBtn = document.getElementById('submitBtn');
       const address = document.getElementById('address').value;
       const name = document.getElementById('name').value;
+      const clientType = document.getElementById('clientType').value;
       const detectedDistrict = detectDistrict(address);
 
       if (editingId) {
@@ -389,6 +419,7 @@
         if (target) {
           const updatedClinic = {
             ...target,
+            clientType: clientType,
             name: name,
             address: address,
             district: detectedDistrict,
@@ -418,6 +449,7 @@
 
           const newClinic = {
             id: newId,
+            clientType: clientType,
             district: detectedDistrict,
             name: name,
             address: address,
@@ -430,21 +462,21 @@
 
           await clinicsRef.child(newId).set(newClinic);
           
-          if (currentFilter !== 'ALL' && currentFilter !== detectedDistrict) {
+          if (currentDistrict !== 'ALL' && currentDistrict !== detectedDistrict) {
             document.getElementById('districtFilter').value = detectedDistrict;
-            currentFilter = detectedDistrict;
+            currentDistrict = detectedDistrict;
           }
 
           map.setView([lat, lng], 16);
           e.target.reset();
         } else {
-          alert('找不到這個地址，請確認有填寫行政區！');
+          alert('找不到這個地址，請確認有填寫新北市與行政區！');
         }
       } catch (err) {
         alert('連線失敗，請檢查網路連線。');
       } finally {
         submitBtn.disabled = false;
-        submitBtn.innerText = '定位並存入雲端';
+        submitBtn.innerText = '定位並同步至雲端';
       }
     });
 
