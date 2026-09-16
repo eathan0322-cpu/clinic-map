@@ -53,6 +53,12 @@
     label { display: block; font-size: 11px; color: #94a3b8; margin-bottom: 2px; }
     input, select, textarea { width: 100%; padding: 7px 9px; background: #334155; border: 1px solid #475569; border-radius: 6px; color: white; font-size: 13px; }
     input:focus, select:focus, textarea:focus { outline: none; border-color: #38bdf8; }
+    
+    /* 複訪快捷按鈕列 */
+    .quick-date-row { display: flex; gap: 6px; margin-top: 5px; }
+    .quick-date-btn { flex: 1; padding: 4px 0; background: #334155; color: #38bdf8; border: 1px solid #475569; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; }
+    .quick-date-btn:hover { background: #475569; color: white; }
+
     button.btn-primary { width: 100%; padding: 10px; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 4px; }
     button.btn-primary:hover { background: #1d4ed8; }
     button.btn-update { background: #16a34a !important; }
@@ -62,13 +68,13 @@
     .legend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
     .legend-item { display: flex; align-items: center; gap: 6px; color: #cbd5e1; font-size: 12px; cursor: pointer; padding: 3px 5px; border-radius: 4px; transition: 0.2s; }
     .legend-item:hover { background: #334155; }
-    .legend-item.active { background: #0284c7; color: white; font-weight: bold; }
 
     .leaflet-popup-content-wrapper { background: #1e293b; color: #f1f5f9; border-radius: 8px; }
     .leaflet-popup-tip { background: #1e293b; }
     .client-badge { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-bottom: 4px; }
     .badge-prospect { background: #0369a1; color: #bae6fd; }
     .badge-existing { background: #854d0e; color: #fef08a; }
+    .popup-date-box { background: #0f172a; padding: 6px 8px; border-radius: 6px; margin: 6px 0; font-size: 11px; border: 1px solid #334155; }
     .popup-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 8px; }
     .popup-btn { text-align: center; border: none; padding: 5px 3px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 3px; }
 
@@ -85,7 +91,7 @@
     <div class="control-panel">
       <div class="search-box">
         <span class="search-icon">🔍</span>
-        <input type="text" id="searchInput" class="search-input" placeholder="搜尋診所、地址或機台關鍵字..." oninput="handleSearch()">
+        <input type="text" id="searchInput" class="search-input" placeholder="搜尋診所、地址、機台或日期..." oninput="handleSearch()">
       </div>
       
       <div class="filter-row">
@@ -123,7 +129,6 @@
         </div>
       </div>
 
-      <!-- 新增：推進階段過濾下拉選單 -->
       <div class="filter-full">
         <label>推進階段篩選</label>
         <select id="statusFilter" class="filter-select" onchange="applyFilters()">
@@ -153,6 +158,7 @@
 
     <form id="clinicForm">
       <input type="hidden" id="editingId" value="">
+      <input type="hidden" id="lastVisitDate" value="">
 
       <div class="form-group">
         <label>客戶屬性</label>
@@ -184,6 +190,19 @@
         <label>現有機台 / 競品與耗材需求</label>
         <input type="text" id="equipment" placeholder="例如：海芙三代、玩美電波、探頭耗材量大">
       </div>
+
+      <!-- 預計複訪日與快捷鍵 -->
+      <div class="form-group">
+        <label>🔔 預計複訪日期（選填）</label>
+        <input type="date" id="followUpDate">
+        <div class="quick-date-row">
+          <button type="button" class="quick-date-btn" onclick="setQuickDate(3)">+3天</button>
+          <button type="button" class="quick-date-btn" onclick="setQuickDate(7)">+7天(下週)</button>
+          <button type="button" class="quick-date-btn" onclick="setQuickDate(14)">+14天(兩週)</button>
+          <button type="button" class="quick-date-btn" onclick="document.getElementById('followUpDate').value=''" style="color:#94a3b8;">清除</button>
+        </div>
+      </div>
+
       <div class="form-group">
         <label>戰情情報與下一步策略</label>
         <textarea id="notes" rows="3" placeholder="例如：店長已換人，下週二預約提報新機台"></textarea>
@@ -360,7 +379,7 @@
       {"id":"sc_08","district":"三重區","clientType":"prospect","name":"杏立皮膚科診所","address":"新北市三重區重新路三段112號","lat":25.0625,"lng":121.4925,"status":"red","equipment":"評估中","notes":"菜寮捷運站旁，主打斑點痘疤與雷射複合式保養"},
       {"id":"sc_09","district":"三重區","clientType":"prospect","name":"恩緹時尚醫美診所 (三重院)","address":"新北市三重區中央南路2號2樓","lat":25.0628,"lng":121.5012,"status":"red","equipment":"評估中","notes":"三和夜市與台北橋交會口，年輕客群除斑與入門音波"},
       {"id":"sc_10","district":"三重區","clientType":"prospect","name":"芯漾美學診所","address":"新北市三重區三和路四段165號","lat":25.0755,"lng":121.4885,"status":"red","equipment":"評估中","notes":"三和路生活圈新興診所，設備評估與換代意願高"},
-      {"id":"sc_11","district":"三重區","clientType":"prospect","name":"新北聯合醫院附設醫美中心","address":"新北市三重區新北大道一段3號","lat":25.0618,"lng":121.4932,"status":"red","equipment":"評估中","notes":"公立區域教學醫院醫美中心，設備引進招標制度健全"},
+      {"id":"sc_11","district":"新北聯合醫院附設醫美中心","address":"新北市三重區新北大道一段3號","lat":25.0618,"lng":121.4932,"status":"red","equipment":"評估中","notes":"公立區域教學醫院醫美中心，設備引進招標制度健全"},
       {"id":"sc_12","district":"三重區","clientType":"prospect","name":"采醫雅典診所","address":"新北市三重區重新路一段118號","lat":25.0635,"lng":121.5032,"status":"red","equipment":"評估中","notes":"台北橋出口連鎖院所，主攻微整針劑與入門光電"},
       {"id":"sc_13","district":"三重區","clientType":"prospect","name":"晶緻美學診所 (三重院)","address":"新北市三重區重新路二段78號3樓","lat":25.0641,"lng":121.4965,"status":"red","equipment":"評估中","notes":"重新路商業大樓內，熟客預約制，電音波拉提與肉毒注射"},
       {"id":"sc_14","district":"三重區","clientType":"prospect","name":"大同皮膚科診所","address":"新北市三重區大同北路22號","lat":25.0648,"lng":121.4972,"status":"red","equipment":"評估中","notes":"大同市場周邊專科，自費換膚、除斑與基礎光療量穩"},
@@ -450,7 +469,9 @@
 
       clinics = Object.values(data).map(item => ({
         ...item,
-        clientType: item.clientType || 'prospect'
+        clientType: item.clientType || 'prospect',
+        lastVisitDate: item.lastVisitDate || '',
+        followUpDate: item.followUpDate || ''
       }));
       renderMap();
       document.getElementById('syncStatus').innerText = '🟢 雲端同步完成';
@@ -487,6 +508,16 @@
       renderMap();
     }
 
+    // 快捷日期設定輔助
+    window.setQuickDate = function(days) {
+      const d = new Date();
+      d.setDate(d.getDate() + days);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      document.getElementById('followUpDate').value = `${yyyy}-${mm}-${dd}`;
+    };
+
     function renderMap() {
       markers.forEach(m => map.removeLayer(m));
       markers = [];
@@ -499,7 +530,9 @@
           (item.name && item.name.toLowerCase().includes(searchQuery)) ||
           (item.address && item.address.toLowerCase().includes(searchQuery)) ||
           (item.equipment && item.equipment.toLowerCase().includes(searchQuery)) ||
-          (item.notes && item.notes.toLowerCase().includes(searchQuery));
+          (item.notes && item.notes.toLowerCase().includes(searchQuery)) ||
+          (item.lastVisitDate && item.lastVisitDate.includes(searchQuery)) ||
+          (item.followUpDate && item.followUpDate.includes(searchQuery));
 
         return matchDistrict && matchClient && matchStatus && matchSearch;
       });
@@ -521,12 +554,21 @@
         const gmapNavUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(item.name + ' ' + item.address)}&travelmode=driving`;
         const gmapSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(item.name + ' ' + (item.district || ''))}`;
 
+        const lastVisitText = item.lastVisitDate ? `📅 上次拜訪：${item.lastVisitDate}` : '📅 上次拜訪：尚未記錄';
+        const followUpText = item.followUpDate ? `🔔 預計複訪：${item.followUpDate}` : '';
+
         const popupContent = `
           <div style="font-size:13px; min-width: 220px;">
             <span class="client-badge ${badgeClass}">${badgeLabel}</span>
             <div style="font-size:11px; color:#38bdf8; font-weight:bold;">${item.district || '新北市'}</div>
             <strong style="font-size:15px;">${item.name}</strong><br>
             <span style="font-size:12px; color:#94a3b8;">${item.address || ''}</span><br>
+            
+            <div class="popup-date-box">
+              <div style="color: #cbd5e1;">${lastVisitText}</div>
+              ${followUpText ? `<div style="color: #facc15; font-weight:bold; margin-top:2px;">${followUpText}</div>` : ''}
+            </div>
+
             <b style="color:#38bdf8;">機台/耗材：</b>${item.equipment || '未註明'}<br>
             <b style="color:#38bdf8;">戰情：</b>${item.notes || '無'}<br>
             
@@ -577,6 +619,8 @@
       if (!target) return;
 
       document.getElementById('editingId').value = target.id;
+      document.getElementById('lastVisitDate').value = target.lastVisitDate || '';
+      document.getElementById('followUpDate').value = target.followUpDate || '';
       document.getElementById('clientType').value = target.clientType || 'prospect';
       document.getElementById('name').value = target.name;
       document.getElementById('address').value = target.address;
@@ -596,6 +640,7 @@
 
     window.resetFormToCreate = function() {
       document.getElementById('editingId').value = '';
+      document.getElementById('lastVisitDate').value = '';
       document.getElementById('clinicForm').reset();
       document.getElementById('formTitle').innerText = '⚔️ 建立與維護目標';
       document.getElementById('cancelEditBtn').style.display = 'none';
@@ -612,7 +657,12 @@
       const address = document.getElementById('address').value;
       const name = document.getElementById('name').value;
       const clientType = document.getElementById('clientType').value;
+      const followUpDate = document.getElementById('followUpDate').value;
       const detectedDistrict = detectDistrict(address);
+
+      // 自動產生當前年月日（例如：2026-09-17）
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
       if (editingId) {
         const target = clinics.find(c => c.id === editingId);
@@ -625,7 +675,9 @@
             district: detectedDistrict,
             status: document.getElementById('status').value,
             equipment: document.getElementById('equipment').value,
-            notes: document.getElementById('notes').value
+            notes: document.getElementById('notes').value,
+            lastVisitDate: todayStr, // 自動蓋上今日拜訪戳記
+            followUpDate: followUpDate
           };
           
           await clinicsRef.child(editingId).set(updatedClinic);
@@ -657,7 +709,9 @@
             lng: lng,
             status: document.getElementById('status').value,
             equipment: document.getElementById('equipment').value,
-            notes: document.getElementById('notes').value
+            notes: document.getElementById('notes').value,
+            lastVisitDate: todayStr,
+            followUpDate: followUpDate
           };
 
           await clinicsRef.child(newId).set(newClinic);
