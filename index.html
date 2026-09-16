@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新北市醫美陌開戰情室 - 轄區解鎖系統</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    body { display: flex; height: 100vh; overflow: hidden; background: #0f172a; color: #f8fafc; }
+    #sidebar { width: 400px; height: 100%; overflow-y: auto; background: #1e293b; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.5); z-index: 1000; flex-shrink: 0; }
+    #map { flex: 1; height: 100%; }
+    
+    /* 遊戲儀表板 */
+    .dashboard { background: #0f172a; padding: 16px; border-radius: 12px; margin-bottom: 16px; border: 1px solid #334155; }
+    .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .dash-title { font-size: 13px; color: #94a3b8; }
+    .dash-score { font-size: 24px; font-weight: bold; color: #38bdf8; display: flex; align-items: baseline; gap: 8px; }
+    .dash-score span { font-size: 13px; color: #64748b; font-weight: normal; }
+    .progress-bar { width: 100%; height: 8px; background: #334155; border-radius: 4px; overflow: hidden; margin-top: 10px; display: flex; }
+    .prog-yellow { background: #eab308; }
+    .prog-orange { background: #f97316; }
+    .prog-green { background: #22c55e; }
+    .prog-purple { background: #a855f7; }
+    .prog-red { background: #ef4444; }
+
+    /* 區域篩選器 */
+    .filter-box { background: #0f172a; padding: 12px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #38bdf8; }
+    .filter-box label { font-size: 12px; font-weight: bold; color: #38bdf8; text-transform: uppercase; margin-bottom: 6px; display: block; }
+    .filter-select { width: 100%; padding: 8px 12px; background: #1e293b; border: 1px solid #475569; border-radius: 6px; color: white; font-size: 14px; font-weight: bold; cursor: pointer; }
+
+    /* 表單元件 */
+    .form-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    h2 { font-size: 16px; color: #f1f5f9; border-left: 3px solid #38bdf8; padding-left: 8px; margin: 0; }
+    .cancel-edit-btn { background: #475569; color: #cbd5e1; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; display: none; }
+    .cancel-edit-btn:hover { background: #64748b; color: white; }
+
+    .form-group { margin-bottom: 10px; }
+    label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 3px; }
+    input, select, textarea { width: 100%; padding: 8px 10px; background: #334155; border: 1px solid #475569; border-radius: 6px; color: white; font-size: 13px; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #38bdf8; }
+    button.btn-primary { width: 100%; padding: 10px; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 6px; }
+    button.btn-primary:hover { background: #1d4ed8; }
+    button.btn-update { background: #16a34a !important; }
+    button.btn-update:hover { background: #15803d !important; }
+    button:disabled { background: #64748b; cursor: not-allowed; }
+
+    /* 色號圖例 */
+    .legend { margin-top: 16px; border-top: 1px solid #334155; padding-top: 12px; font-size: 12px; }
+    .legend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; color: #cbd5e1; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+    /* 匯出匯入按鈕 */
+    .sync-btns { display: flex; gap: 8px; margin-top: 14px; }
+    .sync-btns button { flex: 1; padding: 6px; background: #334155; border: 1px solid #475569; border-radius: 6px; color: #94a3b8; font-size: 11px; cursor: pointer; }
+    .sync-btns button:hover { background: #475569; color: white; }
+
+    /* 彈窗按鈕群組排版 */
+    .leaflet-popup-content-wrapper { background: #1e293b; color: #f1f5f9; border-radius: 8px; }
+    .leaflet-popup-tip { background: #1e293b; }
+    .popup-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+    .popup-btn { text-align: center; border: none; padding: 6px 4px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 4px; }
+
+    @media (max-width: 768px) {
+      body { flex-direction: column-reverse; }
+      #sidebar { width: 100%; height: 50vh; }
+      #map { height: 50vh; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="sidebar">
+    <div class="filter-box">
+      <label>🎯 當前檢視轄區</label>
+      <select id="districtFilter" class="filter-select" onchange="filterDistrict()">
+        <option value="ALL">🌐 新北市全區</option>
+        <option value="板橋區">板橋區</option>
+        <option value="新莊區">新莊區</option>
+        <option value="中和區">中和區</option>
+        <option value="永和區">永和區</option>
+        <option value="三重區">三重區</option>
+        <option value="蘆洲區">蘆洲區</option>
+        <option value="土城區">土城區</option>
+        <option value="新店區">新店區</option>
+        <option value="汐止區">汐止區</option>
+        <option value="其他">其他區域</option>
+      </select>
+    </div>
+
+    <div class="dashboard">
+      <div class="dash-header">
+        <div class="dash-title" id="currentScopeTitle">新北市全區解鎖度</div>
+      </div>
+      <div class="dash-score" id="totalCount">0 <span>家已插旗</span></div>
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <div class="form-header">
+      <h2 id="formTitle">⚔️ 登記探勘目標</h2>
+      <button type="button" id="cancelEditBtn" class="cancel-edit-btn" onclick="resetFormToCreate()">取消編輯</button>
+    </div>
+
+    <form id="clinicForm">
+      <input type="hidden" id="editingId" value="">
+
+      <div class="form-group">
+        <label>診所名稱</label>
+        <input type="text" id="name" placeholder="例如：書拉密美學診所" required>
+      </div>
+      <div class="form-group">
+        <label>診所地址</label>
+        <input type="text" id="address" placeholder="例如：新北市板橋區中山路一段69號6樓之1" required>
+      </div>
+      <div class="form-group">
+        <label>征服進度（色號）</label>
+        <select id="status">
+          <option value="red">🔴 未拜訪 / 遭防禦</option>
+          <option value="yellow">🟡 探路中（摸底/留DM）</option>
+          <option value="orange">🟠 約訪中（拿到窗口/LINE）</option>
+          <option value="green">🟢 談判中（見院長/評估機台）</option>
+          <option value="purple">🟣 已征服（成功簽約合作）</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>現有機台 / 競品設備</label>
+        <input type="text" id="equipment" placeholder="例如：海芙三代、玩美電波、美音">
+      </div>
+      <div class="form-group">
+        <label>情報備忘與下一步行動</label>
+        <textarea id="notes" rows="3" placeholder="例如：店長不在，已加官方LINE約訪"></textarea>
+      </div>
+      <button type="submit" id="submitBtn" class="btn-primary">定位並插旗地圖</button>
+    </form>
+
+    <div class="legend">
+      <div style="font-weight: bold; margin-bottom: 4px; color:#94a3b8;">戰情色標：</div>
+      <div class="legend-grid">
+        <div class="legend-item"><span class="dot" style="background: #ef4444;"></span> 未拜訪 / 迷霧</div>
+        <div class="legend-item"><span class="dot" style="background: #eab308;"></span> 探路中 (摸清設備)</div>
+        <div class="legend-item"><span class="dot" style="background: #f97316;"></span> 約訪中 (取得對話)</div>
+        <div class="legend-item"><span class="dot" style="background: #22c55e;"></span> 談判中 (已見決策者)</div>
+        <div class="legend-item"><span class="dot" style="background: #a855f7;"></span> 已征服 (成功結案)</div>
+      </div>
+    </div>
+
+    <div class="sync-btns">
+      <button type="button" onclick="exportData()">備份資料</button>
+      <button type="button" onclick="importData()">貼上匯入</button>
+    </div>
+  </div>
+
+  <div id="map"></div>
+
+  <script>
+    const districtCoords = {
+      'ALL': { center: [25.012, 121.465], zoom: 12 },
+      '板橋區': { center: [25.0135, 121.4645], zoom: 14 },
+      '新莊區': { center: [25.0375, 121.4485], zoom: 14 },
+      '中和區': { center: [24.9985, 121.5005], zoom: 14 },
+      '永和區': { center: [25.0085, 121.5155], zoom: 15 },
+      '三重區': { center: [25.0685, 121.4885], zoom: 14 },
+      '蘆洲區': { center: [25.0855, 121.4725], zoom: 14 },
+      '土城區': { center: [24.9725, 121.4435], zoom: 14 },
+      '新店區': { center: [24.9685, 121.5415], zoom: 13 },
+      '汐止區': { center: [25.0655, 121.6565], zoom: 13 }
+    };
+
+    let clinics = JSON.parse(localStorage.getItem('ntpc_aesthetic_crm')) || [];
+    let currentFilter = '板橋區';
+
+    const colorMap = {
+      red: '#ef4444',
+      yellow: '#eab308',
+      orange: '#f97316',
+      green: '#22c55e',
+      purple: '#a855f7'
+    };
+
+    const map = L.map('map').setView([25.0135, 121.4645], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    let markers = [];
+
+    function detectDistrict(addr) {
+      const districts = ['板橋區', '新莊區', '中和區', '永和區', '三重區', '蘆洲區', '土城區', '新店區', '汐止區', '樹林區', '三峽區', '鶯歌區', '林口區', '五股區', '泰山區', '淡水區'];
+      for (let d of districts) {
+        if (addr.includes(d) || addr.includes(d.replace('區', ''))) {
+          return d;
+        }
+      }
+      return '其他';
+    }
+
+    function renderMap() {
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+
+      const visibleClinics = currentFilter === 'ALL' 
+        ? clinics 
+        : clinics.filter(c => c.district === currentFilter);
+
+      visibleClinics.forEach(item => {
+        const marker = L.circleMarker([item.lat, item.lng], {
+          radius: 12,
+          fillColor: colorMap[item.status] || '#ef4444',
+          color: '#ffffff',
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.9
+        }).addTo(map);
+
+        // 精準導航（使用 診所名 + 地址，Google Maps 會自動吸附到店家大門）
+        const gmapNavUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(item.name + ' ' + item.address)}&travelmode=driving`;
+        
+        // 查核商家資訊（直接開 Google 搜尋該診所的商家資訊卡）
+        const gmapSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(item.name + ' ' + (item.district || '板橋'))}`;
+
+        const popupContent = `
+          <div style="font-size:14px; min-width: 220px;">
+            <div style="font-size:11px; color:#38bdf8; font-weight:bold;">${item.district || '新北市'}</div>
+            <strong style="font-size:16px;">${item.name}</strong><br>
+            <span style="font-size:12px; color:#94a3b8;">${item.address || ''}</span><br>
+            <b style="color:#38bdf8;">設備：</b>${item.equipment || '未填'}<br>
+            <b style="color:#38bdf8;">情報：</b>${item.notes || '無'}<br>
+            
+            <div class="popup-btn-row">
+              <button class="popup-btn" onclick="startEditClinic('${item.id}')" style="background:#2563eb; color:white;">✏️ 編輯情報</button>
+              <a class="popup-btn" href="${gmapSearchUrl}" target="_blank" style="background:#475569; color:white;">🔍 Google 查核</a>
+              <a class="popup-btn" href="${gmapNavUrl}" target="_blank" style="background:#0284c7; color:white;">🚗 店家導航</a>
+              <button class="popup-btn" onclick="deleteClinic('${item.id}')" style="background:#ef4444; color:white;">🗑️ 刪除標記</button>
+            </div>
+          </div>
+        `;
+        marker.bindPopup(popupContent);
+        markers.push(marker);
+      });
+
+      updateStats(visibleClinics);
+      localStorage.setItem('ntpc_aesthetic_crm', JSON.stringify(clinics));
+    }
+
+    function updateStats(filteredList) {
+      const scopeName = currentFilter === 'ALL' ? '新北市全區' : currentFilter;
+      document.getElementById('currentScopeTitle').innerText = `📍 ${scopeName}解鎖度`;
+      document.getElementById('totalCount').innerHTML = `${filteredList.length} <span>家目標</span>`;
+      
+      const bar = document.getElementById('progressBar');
+      bar.innerHTML = '';
+      if (filteredList.length === 0) return;
+
+      const counts = { red: 0, yellow: 0, orange: 0, green: 0, purple: 0 };
+      filteredList.forEach(c => counts[c.status] = (counts[c.status] || 0) + 1);
+
+      for (let s in counts) {
+        if (counts[s] > 0) {
+          const seg = document.createElement('div');
+          seg.className = `prog-${s}`;
+          seg.style.width = `${(counts[s] / filteredList.length) * 100}%`;
+          bar.appendChild(seg);
+        }
+      }
+    }
+
+    window.startEditClinic = function(id) {
+      const target = clinics.find(c => c.id === id);
+      if (!target) return;
+
+      document.getElementById('editingId').value = target.id;
+      document.getElementById('name').value = target.name;
+      document.getElementById('address').value = target.address;
+      document.getElementById('status').value = target.status;
+      document.getElementById('equipment').value = target.equipment || '';
+      document.getElementById('notes').value = target.notes || '';
+
+      document.getElementById('formTitle').innerText = `✏️ 正在編輯：${target.name}`;
+      document.getElementById('cancelEditBtn').style.display = 'block';
+
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.innerText = '💾 儲存並更新地圖';
+      submitBtn.classList.add('btn-update');
+
+      document.getElementById('sidebar').scrollTop = 120;
+    };
+
+    window.resetFormToCreate = function() {
+      document.getElementById('editingId').value = '';
+      document.getElementById('clinicForm').reset();
+      document.getElementById('formTitle').innerText = '⚔️ 登記探勘目標';
+      document.getElementById('cancelEditBtn').style.display = 'none';
+
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.innerText = '定位並插旗地圖';
+      submitBtn.classList.remove('btn-update');
+    };
+
+    window.filterDistrict = function() {
+      currentFilter = document.getElementById('districtFilter').value;
+      renderMap();
+
+      if (districtCoords[currentFilter]) {
+        map.flyTo(districtCoords[currentFilter].center, districtCoords[currentFilter].zoom, {
+          duration: 1.2
+        });
+      }
+    };
+
+    document.getElementById('clinicForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const editingId = document.getElementById('editingId').value;
+      const submitBtn = document.getElementById('submitBtn');
+      const address = document.getElementById('address').value;
+      const name = document.getElementById('name').value;
+      const detectedDistrict = detectDistrict(address);
+
+      if (editingId) {
+        const index = clinics.findIndex(c => c.id === editingId);
+        if (index !== -1) {
+          clinics[index].name = name;
+          clinics[index].address = address;
+          clinics[index].district = detectedDistrict;
+          clinics[index].status = document.getElementById('status').value;
+          clinics[index].equipment = document.getElementById('equipment').value;
+          clinics[index].notes = document.getElementById('notes').value;
+
+          renderMap();
+          map.closePopup();
+          alert(`✅ 已更新【${name}】的戰情情報與地圖色標！`);
+          resetFormToCreate();
+        }
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerText = '正在地圖上定位地址...';
+
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`);
+        const data = await res.json();
+
+        if (data && data.length > 0) {
+          const lat = parseFloat(data[0].lat);
+          const lng = parseFloat(data[0].lon);
+
+          const newClinic = {
+            id: 'c_' + Date.now(),
+            district: detectedDistrict,
+            name: name,
+            address: address,
+            lat: lat,
+            lng: lng,
+            status: document.getElementById('status').value,
+            equipment: document.getElementById('equipment').value,
+            notes: document.getElementById('notes').value
+          };
+
+          clinics.push(newClinic);
+          
+          if (currentFilter !== 'ALL' && currentFilter !== detectedDistrict) {
+            document.getElementById('districtFilter').value = detectedDistrict;
+            currentFilter = detectedDistrict;
+          }
+
+          renderMap();
+          map.setView([lat, lng], 16);
+          e.target.reset();
+        } else {
+          alert('找不到這個地址，請確認地址有寫上行政區！');
+        }
+      } catch (err) {
+        alert('網路連線搜尋失敗，請稍後再試。');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = '定位並插旗地圖';
+      }
+    });
+
+    window.deleteClinic = function(id) {
+      if (confirm('確定要移除這家診所標記嗎？')) {
+        clinics = clinics.filter(c => c.id !== id);
+        renderMap();
+      }
+    };
+
+    window.exportData = function() {
+      navigator.clipboard.writeText(JSON.stringify(clinics));
+      alert('已將整張戰情資料複製到剪貼簿！');
+    };
+
+    window.importData = function() {
+      const input = prompt('請貼上備份字串：');
+      if (input) {
+        try {
+          clinics = JSON.parse(input);
+          renderMap();
+          alert('同步匯入成功！');
+        } catch (err) {
+          alert('資料格式有誤！');
+        }
+      }
+    };
+
+    document.getElementById('districtFilter').value = '板橋區';
+    renderMap();
+  </script>
+</body>
+</html>
