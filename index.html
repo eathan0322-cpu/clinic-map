@@ -343,7 +343,7 @@
       {"id":"sc_08","district":"三重區","clientType":"prospect","name":"杏立皮膚科診所","address":"新北市三重區重新路三段112號","lat":25.0625,"lng":121.4925,"status":"red","equipment":"評估中","notes":"菜寮捷運站旁，主打斑點痘疤與雷射複合式保養"},
       {"id":"sc_09","district":"三重區","clientType":"prospect","name":"恩緹時尚醫美診所 (三重院)","address":"新北市三重區中央南路2號2樓","lat":25.0628,"lng":121.5012,"status":"red","equipment":"評估中","notes":"三和夜市與台北橋交會口，年輕客群除斑與入門音波"},
       {"id":"sc_10","district":"三重區","clientType":"prospect","name":"芯漾美學診所","address":"新北市三重區三和路四段165號","lat":25.0755,"lng":121.4885,"status":"red","equipment":"評估中","notes":"三和路生活圈新興診所，設備評估與換代意願高"},
-      {"id":"sc_11","district":"三重區","clientType":"prospect","name":"新北聯合醫院附設醫美中心","address":"新北市三重區新北大道一段3號","lat":25.0618,"lng":121.4932,"status":"red","equipment":"評估中","notes":"公立區域教學醫院醫美中心，設備引進招標制度健全"},
+      {"id":"sc_11","district":"新北聯合醫院附設醫美中心","address":"新北市三重區新北大道一段3號","lat":25.0618,"lng":121.4932,"status":"red","equipment":"評估中","notes":"公立區域教學醫院醫美中心，設備引進招標制度健全"},
       {"id":"sc_12","district":"三重區","clientType":"prospect","name":"采醫雅典診所","address":"新北市三重區重新路一段118號","lat":25.0635,"lng":121.5032,"status":"red","equipment":"評估中","notes":"台北橋出口連鎖院所，主攻微整針劑與入門光電"},
       {"id":"sc_13","district":"三重區","clientType":"prospect","name":"晶緻美學診所 (三重院)","address":"新北市三重區重新路二段78號3樓","lat":25.0641,"lng":121.4965,"status":"red","equipment":"評估中","notes":"重新路商業大樓內，熟客預約制，電音波拉提與肉毒注射"},
       {"id":"sc_14","district":"三重區","clientType":"prospect","name":"大同皮膚科診所","address":"新北市三重區大同北路22號","lat":25.0648,"lng":121.4972,"status":"red","equipment":"評估中","notes":"大同市場周邊專科，自費換膚、除斑與基礎光療量穩"},
@@ -414,11 +414,10 @@
 
     const map = L.map('map').setView([25.0135, 121.4645], 14);
 
-    // 切換為極簡亮白商務風（Positron light_all），完全免費、無浮水印且極速
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    // 換回第一版最受歡迎的柔和暖色圖資（HOT 人道救援風格），無第三方浮水印
+    L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      subdomains: 'abcd',
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+      attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
     clinicsRef.on('value', (snapshot) => {
@@ -460,6 +459,7 @@
       renderMap();
 
       if (shouldFly && districtCoords[currentDistrict]) {
+        // 瞬間聚焦並重繪圖磚，不跑平移動畫，避免伺服器限流卡圖
         map.setView(districtCoords[currentDistrict].center, districtCoords[currentDistrict].zoom);
         setTimeout(() => map.invalidateSize(), 50);
       }
