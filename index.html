@@ -415,10 +415,10 @@
 
     const map = L.map('map').setView([25.0135, 121.4645], 14);
 
-    // 換上 CartoDB 高速全球商用 CDN 圖磚（秒開不限流）
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    // 換上 OpenStreetMap 官方標準高速圖資（完全無任何浮水印、免 API KEY）
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+      attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
     clinicsRef.on('value', (snapshot) => {
@@ -460,7 +460,7 @@
       renderMap();
 
       if (shouldFly && districtCoords[currentDistrict]) {
-        // 瞬間聚焦並重繪圖磚，徹底告別平移動畫卡頓與灰底
+        // 瞬間聚焦並重繪圖磚，告別平移動畫卡頓
         map.setView(districtCoords[currentDistrict].center, districtCoords[currentDistrict].zoom);
         setTimeout(() => map.invalidateSize(), 50);
       }
