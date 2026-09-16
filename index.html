@@ -28,7 +28,8 @@
     .search-input:focus { outline: none; border-color: #38bdf8; }
     .search-icon { position: absolute; left: 10px; top: 10px; font-size: 13px; color: #94a3b8; }
     
-    .filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 6px; }
+    .filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+    .filter-full { margin-bottom: 4px; }
     .filter-select { width: 100%; padding: 7px 10px; background: #1e293b; border: 1px solid #475569; border-radius: 6px; color: white; font-size: 13px; font-weight: bold; cursor: pointer; }
 
     .dashboard { background: #0f172a; padding: 14px; border-radius: 12px; margin-bottom: 14px; border: 1px solid #334155; }
@@ -37,7 +38,7 @@
     .dash-sync { font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #065f46; color: #34d399; font-weight: bold; }
     .dash-score { font-size: 22px; font-weight: bold; color: #38bdf8; display: flex; align-items: baseline; gap: 6px; }
     .dash-score span { font-size: 12px; color: #64748b; font-weight: normal; }
-    .progress-bar { width: 100%; height: 7px; background: #334155; border-radius: 4px; overflow: hidden; margin-top: 8px; display: flex; }
+    .progress-bar { width: 100%; height: 8px; background: #334155; border-radius: 4px; overflow: hidden; margin-top: 8px; display: flex; cursor: pointer; }
     .prog-yellow { background: #eab308; }
     .prog-orange { background: #f97316; }
     .prog-green { background: #22c55e; }
@@ -59,7 +60,9 @@
 
     .legend { margin-top: 14px; border-top: 1px solid #334155; padding-top: 10px; font-size: 12px; }
     .legend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
-    .legend-item { display: flex; align-items: center; gap: 6px; color: #cbd5e1; font-size: 12px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; color: #cbd5e1; font-size: 12px; cursor: pointer; padding: 3px 5px; border-radius: 4px; transition: 0.2s; }
+    .legend-item:hover { background: #334155; }
+    .legend-item.active { background: #0284c7; color: white; font-weight: bold; }
 
     .leaflet-popup-content-wrapper { background: #1e293b; color: #f1f5f9; border-radius: 8px; }
     .leaflet-popup-tip { background: #1e293b; }
@@ -84,6 +87,7 @@
         <span class="search-icon">🔍</span>
         <input type="text" id="searchInput" class="search-input" placeholder="搜尋診所、地址或機台關鍵字..." oninput="handleSearch()">
       </div>
+      
       <div class="filter-row">
         <div>
           <label>客群維度</label>
@@ -118,6 +122,19 @@
           </select>
         </div>
       </div>
+
+      <!-- 新增：推進階段過濾下拉選單 -->
+      <div class="filter-full">
+        <label>推進階段篩選</label>
+        <select id="statusFilter" class="filter-select" onchange="applyFilters()">
+          <option value="ALL">🌈 全部階段顯示</option>
+          <option value="red">🔴 未探勘 / 迷霧防禦</option>
+          <option value="yellow">🟡 初訪摸底（DM留置/競品盤點）</option>
+          <option value="orange">🟠 鎖定對話（取得院長/店長窗口）</option>
+          <option value="green">🟢 評估試機（DEMO/提報報價）</option>
+          <option value="purple">🟣 合作結案（已成交/常態維護）</option>
+        </select>
+      </div>
     </div>
 
     <div class="dashboard">
@@ -126,7 +143,7 @@
         <div class="dash-sync" id="syncStatus">🟢 雲端同步完成</div>
       </div>
       <div class="dash-score" id="totalCount">0 <span>家顯示中</span></div>
-      <div class="progress-bar" id="progressBar"></div>
+      <div class="progress-bar" id="progressBar" title="點擊進度條可依比例快速篩選"></div>
     </div>
 
     <div class="form-header">
@@ -175,14 +192,14 @@
     </form>
 
     <div class="legend">
-      <div style="font-weight: bold; margin-bottom: 6px; color:#94a3b8;">階段色標與圖例：</div>
+      <div style="font-weight: bold; margin-bottom: 6px; color:#94a3b8;">階段色標與圖例（點擊可快速過濾）：</div>
       <div class="legend-grid">
-        <div class="legend-item">🔴 未探勘 / 迷霧</div>
-        <div class="legend-item">🟡 初訪摸底</div>
-        <div class="legend-item">🟠 鎖定對話窗口</div>
-        <div class="legend-item">🟢 評估試機 / 報價</div>
-        <div class="legend-item">🟣 合作結案 / 維護</div>
-        <div class="legend-item"><span style="display:inline-block; width:12px; height:12px; border:2.5px solid #facc15; border-radius:50%; margin-right:2px;"></span> 金框：既有客戶</div>
+        <div class="legend-item" onclick="quickFilterStatus('red')">🔴 未探勘 / 迷霧</div>
+        <div class="legend-item" onclick="quickFilterStatus('yellow')">🟡 初訪摸底</div>
+        <div class="legend-item" onclick="quickFilterStatus('orange')">🟠 鎖定對話窗口</div>
+        <div class="legend-item" onclick="quickFilterStatus('green')">🟢 評估試機 / 報價</div>
+        <div class="legend-item" onclick="quickFilterStatus('purple')">🟣 合作結案 / 維護</div>
+        <div class="legend-item" onclick="quickFilterStatus('ALL')">🔄 顯示全部階段</div>
       </div>
     </div>
   </div>
@@ -273,7 +290,7 @@
       {"id":"xz_24","district":"新莊區","clientType":"prospect","name":"恩緹時尚醫美診所","address":"新北市新莊區思源路332巷2號","lat":25.0489,"lng":121.4592,"status":"red","equipment":"評估中","notes":"捷運幸福站生活圈，微整針劑與非侵入緊緻療程"},
       {"id":"xz_25","district":"新莊區","clientType":"prospect","name":"美加美學診所（新莊院）","address":"新北市新莊區幸福路672號","lat":25.0485,"lng":121.4501,"status":"red","equipment":"評估中","notes":"連鎖醫美體系，以音波拉提與玻尿酸填充為主"},
       {"id":"xz_26","district":"新莊區","clientType":"prospect","name":"晶緻美學診所（新莊分院）","address":"新北市新莊區幸福路817巷6號","lat":25.0498,"lng":121.4452,"status":"red","equipment":"評估中","notes":"幸福商圈靜巷預約制院所，主攻熟客抗老拉提與肉毒"},
-      {"id":"xz_27","district":"新莊區","clientType":"prospect","name":"儷寶得皮膚科診所（新莊分部）","address":"新北市新莊區中德街18號","lat":25.0582,"lng":121.4528,"status":"red","equipment":"評估中","notes":"整合性皮膚光電中心，主打斑點痘疤與雷射複合治療"},
+      {"id":"xz_27","district":"新莊區","clientType":"prospect","name":"儷寶得皮膚科診所（新莊分部）","address":"新北市中德街18號","lat":25.0582,"lng":121.4528,"status":"red","equipment":"評估中","notes":"整合性皮膚光電中心，主打斑點痘疤與雷射複合治療"},
       {"id":"xz_28","district":"新莊區","clientType":"prospect","name":"雅緹美學診所","address":"新北市新莊區福美街126號","lat":25.0525,"lng":121.4618,"status":"red","equipment":"評估中","notes":"住宅區社區型診所，主推電音波拉皮與日常微整維護"},
       {"id":"xz_29","district":"新莊區","clientType":"prospect","name":"康緹醫美診所","address":"新北市新莊區中正路729號2樓","lat":25.0255,"lng":121.4182,"status":"red","equipment":"評估中","notes":"捷運丹鳳站出口旁，主攻年輕上班族微整與皮秒雷射"},
       {"id":"xz_30","district":"新莊區","clientType":"prospect","name":"新莊美無極診所","address":"新北市新莊區公園路58號","lat":25.0392,"lng":121.4525,"status":"red","equipment":"評估中","notes":"新莊運動公園旁，專注抗老拉提、音波與美體雕塑"},
@@ -343,7 +360,7 @@
       {"id":"sc_08","district":"三重區","clientType":"prospect","name":"杏立皮膚科診所","address":"新北市三重區重新路三段112號","lat":25.0625,"lng":121.4925,"status":"red","equipment":"評估中","notes":"菜寮捷運站旁，主打斑點痘疤與雷射複合式保養"},
       {"id":"sc_09","district":"三重區","clientType":"prospect","name":"恩緹時尚醫美診所 (三重院)","address":"新北市三重區中央南路2號2樓","lat":25.0628,"lng":121.5012,"status":"red","equipment":"評估中","notes":"三和夜市與台北橋交會口，年輕客群除斑與入門音波"},
       {"id":"sc_10","district":"三重區","clientType":"prospect","name":"芯漾美學診所","address":"新北市三重區三和路四段165號","lat":25.0755,"lng":121.4885,"status":"red","equipment":"評估中","notes":"三和路生活圈新興診所，設備評估與換代意願高"},
-      {"id":"sc_11","district":"新北聯合醫院附設醫美中心","address":"新北市三重區新北大道一段3號","lat":25.0618,"lng":121.4932,"status":"red","equipment":"評估中","notes":"公立區域教學醫院醫美中心，設備引進招標制度健全"},
+      {"id":"sc_11","district":"三重區","clientType":"prospect","name":"新北聯合醫院附設醫美中心","address":"新北市三重區新北大道一段3號","lat":25.0618,"lng":121.4932,"status":"red","equipment":"評估中","notes":"公立區域教學醫院醫美中心，設備引進招標制度健全"},
       {"id":"sc_12","district":"三重區","clientType":"prospect","name":"采醫雅典診所","address":"新北市三重區重新路一段118號","lat":25.0635,"lng":121.5032,"status":"red","equipment":"評估中","notes":"台北橋出口連鎖院所，主攻微整針劑與入門光電"},
       {"id":"sc_13","district":"三重區","clientType":"prospect","name":"晶緻美學診所 (三重院)","address":"新北市三重區重新路二段78號3樓","lat":25.0641,"lng":121.4965,"status":"red","equipment":"評估中","notes":"重新路商業大樓內，熟客預約制，電音波拉提與肉毒注射"},
       {"id":"sc_14","district":"三重區","clientType":"prospect","name":"大同皮膚科診所","address":"新北市三重區大同北路22號","lat":25.0648,"lng":121.4972,"status":"red","equipment":"評估中","notes":"大同市場周邊專科，自費換膚、除斑與基礎光療量穩"},
@@ -367,7 +384,7 @@
       {"id":"lk_07","district":"林口區","clientType":"prospect","name":"研之美美學診所","address":"新北市林口區文化二路一段559號","lat":25.0782,"lng":121.3745,"status":"red","equipment":"評估中","notes":"豪宅聚落自費診所，客單價高，偏好非侵入設備"},
       {"id":"lk_08","district":"林口區","clientType":"prospect","name":"雅美姬時尚診所 (林口院)","address":"新北市林口區文化三路一段249巷40號","lat":25.0685,"lng":121.3665,"status":"red","equipment":"評估中","notes":"三井生活圈，白領與家庭客群抗老拉提主力"},
       {"id":"lk_09","district":"林口區","clientType":"prospect","name":"維格皮膚科診所 (林口院)","address":"新北市林口區文化三路一段191巷26號","lat":25.0672,"lng":121.3658,"status":"red","equipment":"評估中","notes":"維格體系林口旗艦點，原廠光電與微整針劑量大"},
-      {"id":"lk_10","district":"林口區","clientType":"prospect","name":"晴美皮膚專科診所","address":"新北市林口區文化三路一段561號","lat":25.0792,"lng":121.3718,"status":"red","equipment":"評估中","notes":"專科醫師陣容完整，設備引進意願與升級評估度高"},
+      {"id":"lk_10","district":"林口區","clientType":"prospect","name":"晴美皮膚專科診所","address":"新北市林口區文化三路一段561號","lat":25.0792,"lng":121.3718,"status":"red","equipment":"評估中","notes":"專科醫師陣容完整，設備引送意願與升級評估度高"},
       {"id":"lk_11","district":"林口區","clientType":"prospect","name":"欣悅皮膚科診所","address":"新北市林口區仁愛路二段228號","lat":25.0765,"lng":121.3822,"status":"red","equipment":"評估中","notes":"舊市區與重劃區交界，在地家庭客群，自費除斑保養穩定"},
       {"id":"lk_12","district":"林口區","clientType":"prospect","name":"琢美美學診所","address":"新北市林口區文化三路一段402巷18號","lat":25.0742,"lng":121.3682,"status":"red","equipment":"評估中","notes":"昕境國賓影城周邊，主打原廠皮秒、電音波拉皮與肉毒微整"},
       {"id":"lk_13","district":"林口區","clientType":"prospect","name":"鉑金美學診所","address":"新北市林口區八德路32號","lat":25.0658,"lng":121.3645,"status":"red","equipment":"評估中","notes":"捷運站正對面豪宅區，客單價極高，偏好高階緊膚拉提"},
@@ -409,12 +426,12 @@
     let clinics = [];
     let currentDistrict = '板橋區';
     let currentClientType = 'ALL';
+    let currentStatusFilter = 'ALL';
     let searchQuery = '';
     let markers = [];
 
     const map = L.map('map').setView([25.0135, 121.4645], 14);
 
-    // 換回第一版最受歡迎的柔和暖色圖資（HOT 人道救援風格），無第三方浮水印
     L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
@@ -427,7 +444,6 @@
         return;
       }
       
-      // 自動增量補入各區新點位，絕對不覆蓋既有紀錄
       initialVerifiedClinics.forEach(c => {
         if (!data[c.id]) clinicsRef.child(c.id).set(c);
       });
@@ -456,13 +472,19 @@
     function applyFilters(shouldFly = false) {
       currentDistrict = document.getElementById('districtFilter').value;
       currentClientType = document.getElementById('clientTypeFilter').value;
+      currentStatusFilter = document.getElementById('statusFilter').value;
       renderMap();
 
       if (shouldFly && districtCoords[currentDistrict]) {
-        // 瞬間聚焦並重繪圖磚，不跑平移動畫，避免伺服器限流卡圖
         map.setView(districtCoords[currentDistrict].center, districtCoords[currentDistrict].zoom);
         setTimeout(() => map.invalidateSize(), 50);
       }
+    }
+
+    function quickFilterStatus(status) {
+      document.getElementById('statusFilter').value = status;
+      currentStatusFilter = status;
+      renderMap();
     }
 
     function renderMap() {
@@ -472,13 +494,14 @@
       const filtered = clinics.filter(item => {
         const matchDistrict = (currentDistrict === 'ALL') || (item.district === currentDistrict);
         const matchClient = (currentClientType === 'ALL') || (item.clientType === currentClientType);
+        const matchStatus = (currentStatusFilter === 'ALL') || (item.status === currentStatusFilter);
         const matchSearch = !searchQuery || 
           (item.name && item.name.toLowerCase().includes(searchQuery)) ||
           (item.address && item.address.toLowerCase().includes(searchQuery)) ||
           (item.equipment && item.equipment.toLowerCase().includes(searchQuery)) ||
           (item.notes && item.notes.toLowerCase().includes(searchQuery));
 
-        return matchDistrict && matchClient && matchSearch;
+        return matchDistrict && matchClient && matchStatus && matchSearch;
       });
 
       filtered.forEach(item => {
@@ -539,6 +562,11 @@
           const seg = document.createElement('div');
           seg.className = `prog-${s}`;
           seg.style.width = `${(counts[s] / filteredList.length) * 100}%`;
+          seg.title = `點擊只看此階段 (${counts[s]} 家)`;
+          seg.onclick = (e) => {
+            e.stopPropagation();
+            quickFilterStatus(s);
+          };
           bar.appendChild(seg);
         }
       }
