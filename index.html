@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>新北基醫美戰情室 - 雙軌業務與即時搜尋版</title>
+  <title>雙北基醫美戰情室 - 純雲端即時版</title>
   
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -68,6 +68,7 @@
     .prog-green { background: #22c55e; }
     .prog-purple { background: #a855f7; }
     .prog-red { background: #ef4444; }
+    .prog-gray { background: #64748b; }
 
     .form-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
     h2 { font-size: 15px; color: #f1f5f9; border-left: 3px solid #38bdf8; padding-left: 8px; margin: 0; }
@@ -171,6 +172,7 @@
           <option value="orange">🟠 鎖定對話（取得院長/店長窗口）</option>
           <option value="green">🟢 評估試機（DEMO/提報報價）</option>
           <option value="purple">🟣 合作結案（已成交/常態維護）</option>
+          <option value="gray">⚪ 暫緩擱置（多次碰壁/冷凍抗性）</option>
         </select>
       </div>
 
@@ -235,6 +237,7 @@
           <option value="orange">🟠 鎖定對話（取得院長/店長窗口）</option>
           <option value="green">🟢 評估試機（DEMO/提報報價）</option>
           <option value="purple">🟣 合作結案（已成交/常態維護）</option>
+          <option value="gray">⚪ 暫緩擱置（多次碰壁/冷凍抗性）</option>
         </select>
       </div>
 
@@ -256,20 +259,21 @@
 
       <div class="form-group">
         <label>戰情情報與下一步策略</label>
-        <textarea id="notes" rows="3" placeholder="例如：店長已換人，下週二預約提報新機台"></textarea>
+        <textarea id="notes" rows="3" placeholder="例如：店長態度保留，目前合約綁死，預計半年後再重啟接觸"></textarea>
       </div>
       <button type="submit" id="submitBtn" class="btn-primary">定位並同步至雲端</button>
     </form>
 
     <div class="legend">
-      <div style="font-weight: bold; margin-bottom: 6px; color:#94a3b8;">階段色標與圖例（所有標記皆可自由拖曳微調）：</div>
+      <div style="font-weight: bold; margin-bottom: 6px; color:#94a3b8;">階段色標與圖例（點擊可快速過濾）：</div>
       <div class="legend-grid">
         <div class="legend-item" onclick="quickFilterStatus('red')">🔴 未探勘 / 迷霧</div>
         <div class="legend-item" onclick="quickFilterStatus('yellow')">🟡 初訪摸底</div>
         <div class="legend-item" onclick="quickFilterStatus('orange')">🟠 鎖定對話窗口</div>
         <div class="legend-item" onclick="quickFilterStatus('green')">🟢 評估試機 / 報價</div>
         <div class="legend-item" onclick="quickFilterStatus('purple')">🟣 陌開結案</div>
-        <div class="legend-item" style="cursor:default;"><span style="display:inline-flex; align-items:center; justify-content:center; width:17px; height:17px; background:#0f172a; border:1.5px solid #eab308; border-radius:50%; font-size:10px; color:#facc15;">⭐</span> 既有客戶 (黑金星鑽)</div>
+        <div class="legend-item" onclick="quickFilterStatus('gray')">⚪ 暫緩擱置 / 冷凍</div>
+        <div class="legend-item" style="cursor:default; grid-column: span 2;"><span style="display:inline-flex; align-items:center; justify-content:center; width:17px; height:17px; background:#0f172a; border:1.5px solid #eab308; border-radius:50%; font-size:10px; color:#facc15;">⭐</span> 既有客戶 (黑金星鑽)</div>
       </div>
     </div>
   </div>
@@ -325,7 +329,8 @@
       yellow: '#eab308',
       orange: '#f97316',
       green: '#22c55e',
-      purple: '#a855f7'
+      purple: '#a855f7',
+      gray: '#64748b'
     };
 
     const statusNames = {
@@ -333,7 +338,8 @@
       yellow: '🟡 初訪摸底',
       orange: '🟠 鎖定窗口',
       green: '🟢 評估試機',
-      purple: '🟣 合作結案'
+      purple: '🟣 合作結案',
+      gray: '⚪ 暫緩擱置'
     };
 
     let clinics = [];
@@ -350,6 +356,7 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
+    // 完全純粹的雲端監聽：無預設陣列，無自動回填邏輯
     clinicsRef.on('value', (snapshot) => {
       const data = snapshot.val();
       if (!data) {
@@ -648,7 +655,7 @@
       const prospectList = filteredList.filter(c => c.clientType !== 'existing');
       if (prospectList.length === 0) return;
 
-      const counts = { red: 0, yellow: 0, orange: 0, green: 0, purple: 0 };
+      const counts = { red: 0, yellow: 0, orange: 0, green: 0, purple: 0, gray: 0 };
       prospectList.forEach(c => counts[c.status] = (counts[c.status] || 0) + 1);
 
       for (let s in counts) {
@@ -656,7 +663,7 @@
           const seg = document.createElement('div');
           seg.className = `prog-${s}`;
           seg.style.width = `${(counts[s] / prospectList.length) * 100}%`;
-          seg.title = `陌開階段 (${counts[s]} 家)`;
+          seg.title = `${statusNames[s]} (${counts[s]} 家)`;
           seg.onclick = (e) => {
             e.stopPropagation();
             quickFilterStatus(s);
@@ -737,14 +744,14 @@
           slide.addShape(pptx.ShapeType.roundRect, {
             x: posX, y: 1.0, w: 4.1, h: 4.1,
             fill: { color: "0F172A" },
-            line: { color: isExisting ? "FACC15" : "334155", width: isExisting ? 2 : 1.5 },
+            line: { color: isExisting ? "FACC15" : (item.status === 'gray' ? "64748B" : "334155"), width: isExisting ? 2 : 1.5 },
             rectRadius: 0.1
           });
 
           const clientTypeLabel = isExisting ? '[⭐ 既有客戶]' : '[🎯 陌開客戶]';
           slide.addText(`${clientTypeLabel} ${item.name}`, {
             x: posX + 0.2, y: 1.2, w: 3.7, h: 0.6,
-            fontSize: 15, bold: true, color: isExisting ? "FACC15" : "38BDF8"
+            fontSize: 15, bold: true, color: isExisting ? "FACC15" : (item.status === 'gray' ? "94A3B8" : "38BDF8")
           });
 
           const stageText = isExisting ? '常態耗材巡補/擴機評估' : (statusNames[item.status] || item.status);
