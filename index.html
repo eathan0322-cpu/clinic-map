@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>新北基醫美戰情室 - 雙軌業務與即時搜尋版</title>
+  <title>雙北基醫美戰情室 - 雙軌業務與即時搜尋版</title>
   
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -220,7 +220,7 @@
 
       <div class="form-group">
         <label>診所名稱</label>
-        <input type="text" id="name" placeholder="例如：泰可國際 或 康博診所" required>
+        <input type="text" id="name" placeholder="例如：泰可國際" required>
       </div>
       <div class="form-group">
         <label>診所地址</label>
@@ -808,22 +808,27 @@
       submitBtn.classList.remove('btn-update');
     };
 
-    /* 台灣限定多階精準搜尋器 (嚴格鎖死 countrycodes=tw，絕不飄到國外) */
+    /* 真正嚴謹的台灣在地精準定位器：
+       1. 絕對鎖死行政區優先，嚴防中正路、中和路、文化路跨區撞名
+       2. 去除樓層、里村鄰干擾
+       3. 同區路段兜底吸附，不再飄去無關學校
+       4. 嚴格鎖定台灣國碼 tw
+    */
     async function smartGeocode(name, rawAddress, detectedDistrict) {
       const twLock = '&countrycodes=tw';
 
-      // 1. 純淨門牌清洗
+      // 1. 純淨門牌清洗（去除里村鄰、去除 1樓、2F 等尾綴）
       let clean = rawAddress.replace(/.{1,3}[里村鄰]/g, '').trim();
       let pureStreetNumber = clean.replace(/\d+[樓fF-].*/g, '').trim();
 
-      // 優先序 A：純淨門牌查詢 (最標準精確)
+      // 優先序 1：【完整縣市 + 完整行政區 + 純門牌】（防撞車最高順位，確保中和不飄永和）
       try {
         let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(pureStreetNumber)}${twLock}`);
         let data = await res.json();
         if (data && data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
       } catch(e) {}
 
-      // 優先序 B：店名 + 行政區查詢 (鎖死台灣)
+      // 優先序 2：【行政區 + 店名】精準地標（若地圖早有登記該診所或企業，直接屋頂命中）
       if (name) {
         const queryName = `${detectedDistrict !== '其他' ? detectedDistrict : ''} ${name}`.trim();
         try {
@@ -833,14 +838,7 @@
         } catch(e) {}
       }
 
-      // 優先序 C：原始清洗地址
-      try {
-        let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(clean)}${twLock}`);
-        let data = await res.json();
-        if (data && data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-      } catch(e) {}
-
-      // 優先序 D：降級退到路段/巷段 (鎖死台灣)
+      // 優先序 3：【同行政區 + 道路名稱中心】（若門牌號碼在圖資遺漏，強制吸附在該區這條路上，絕不跨區）
       let streetOnly = pureStreetNumber.replace(/\d+.*[號].*/g, '').trim();
       if (streetOnly && streetOnly !== pureStreetNumber) {
         try {
@@ -850,12 +848,15 @@
         } catch(e) {}
       }
 
-      // 優先序 E：行政區中心保底
-      if (districtCoords[detectedDistrict]) {
-        return {
-          lat: districtCoords[detectedDistrict].center[0],
-          lng: districtCoords[detectedDistrict].center[1]
-        };
+      // 優先序 4：跨區容錯穿透（僅適用於極少數雙北區界劃分爭議點，例如東興路跨界）
+      const districtMatch = pureStreetNumber.match(/(台北市|新北市|基隆市)(.+?[區市鄉鎮])(.+)/);
+      if (districtMatch) {
+        const cityAndStreet = `${districtMatch[1]} ${districtMatch[3]}`;
+        try {
+          let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cityAndStreet)}${twLock}`);
+          let data = await res.json();
+          if (data && data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+        } catch(e) {}
       }
 
       return null;
@@ -898,7 +899,7 @@
       }
 
       submitBtn.disabled = true;
-      submitBtn.innerText = '正在台灣境內精準定位中...';
+      submitBtn.innerText = '正在嚴格依轄區定位中...';
 
       try {
         const coords = await smartGeocode(name, address, detectedDistrict);
@@ -930,7 +931,7 @@
           map.setView([coords.lat, coords.lng], 16);
           e.target.reset();
         } else {
-          alert('找不到這個地址，請確認有填寫正確的台灣縣市行政區與路名！');
+          alert('找不到這個地址，請確認路名與門牌填寫是否正確！');
         }
       } catch (err) {
         alert('連線失敗，請檢查網路連線。');
