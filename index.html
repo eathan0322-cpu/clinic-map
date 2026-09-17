@@ -175,7 +175,7 @@
       </div>
     </div>
 
-    <!-- 智慧複訪追蹤看板（無任務時完全隱藏） -->
+    <!-- 智慧複訪提醒看板（動態收合） -->
     <div id="reminderPanel">
       <div class="reminder-header" onclick="toggleReminderList()">
         <div class="reminder-title">
@@ -215,11 +215,11 @@
 
       <div class="form-group">
         <label>診所名稱</label>
-        <input type="text" id="name" placeholder="例如：基隆葛萊美診所" required>
+        <input type="text" id="name" placeholder="例如：康博診所" required>
       </div>
       <div class="form-group">
         <label>診所地址</label>
-        <input type="text" id="address" placeholder="例如：基隆市中正區義一路23號2樓" required>
+        <input type="text" id="address" placeholder="例如：基隆市七堵區南興路99號" required>
       </div>
 
       <div class="form-group" id="statusFormGroup">
@@ -235,7 +235,7 @@
 
       <div class="form-group">
         <label>現有機台 / 競品與耗材需求</label>
-        <input type="text" id="equipment" placeholder="例如：海芙音波、皮秒雷射、探頭耗材量大">
+        <input type="text" id="equipment" placeholder="例如：Q+ 音波、皮秒雷射、探頭耗材量大">
       </div>
 
       <div class="form-group">
@@ -251,7 +251,7 @@
 
       <div class="form-group">
         <label>戰情情報與下一步策略</label>
-        <textarea id="notes" rows="3" placeholder="例如：店長已換人，下週二預約提報新機台"></textarea>
+        <textarea id="notes" rows="3" placeholder="例如：店長已換人，上午10點前往Q+探頭報價"></textarea>
       </div>
       <button type="submit" id="submitBtn" class="btn-primary">定位並同步至雲端</button>
     </form>
@@ -286,7 +286,6 @@
     const db = firebase.database();
     const clinicsRef = db.ref('clinics');
 
-    // 170 家雙北基指標院所預設總表
     const initialVerifiedClinics = [
       // 板橋區 (38)
       {"id":"bq_01","district":"板橋區","clientType":"prospect","name":"板橋光澤診所","address":"新北市板橋區館前東路2號","lat":25.0075,"lng":121.4619,"status":"red","equipment":"評估中","notes":"光澤旗艦大本營，光電與微整主力院所"},
@@ -409,7 +408,7 @@
       {"id":"yh_15","district":"永和區","clientType":"prospect","name":"仁愛皮膚科診所 (永和)","address":"新北市永和區仁愛路269號","lat":25.0122,"lng":121.5075,"status":"red","equipment":"評估中","notes":"仁愛公園豪宅生活圈，住戶偏好高單價非侵入拉提"},
       {"id":"yh_16","district":"永和區","clientType":"prospect","name":"雅緹皮膚專科診所","address":"新北市永和區得和路243號","lat":25.0028,"lng":121.5215,"status":"red","equipment":"評估中","notes":"秀朗國小生活圈核心專科，健保帶自費雷射光療"},
       {"id":"yh_17","district":"永和區","clientType":"prospect","name":"綺麗醫美診所","address":"新北市永和區光復街36號","lat":25.0152,"lng":121.5135,"status":"red","equipment":"評估中","notes":"頂溪周邊自費診所，主攻微整針劑、埋線與局部體雕"},
-      {"id":"yh_18","district":"永和區","clientType":"prospect","name":"晶漾美學診所 (永和院)","address":"新北市永和區永平路82號2樓","lat":25.0128,"lng":121.5105,"status":"red","equipment":"評估中","notes":"樂華夜市旁，主推微整注射、除斑與緊緻光療"},
+      {"id":"yh_18","district":"永和區","clientType":"prospect","name":"晶漾美學診所 (永和院)","address":"新北市永平路82號2樓","lat":25.0128,"lng":121.5105,"status":"red","equipment":"評估中","notes":"樂華夜市旁，主推微整注射、除斑與緊緻光療"},
       {"id":"yh_19","district":"永和區","clientType":"prospect","name":"敦美皮膚科診所","address":"新北市永和區永貞路345號","lat":25.0072,"lng":121.5108,"status":"red","equipment":"評估中","notes":"永貞路餐飲熱區，白領下班保養與雷射除毛量穩"},
       {"id":"yh_20","district":"永和區","clientType":"prospect","name":"宏林皮膚科診所","address":"新北市永和區得和路385號","lat":25.0015,"lng":121.5242,"status":"red","equipment":"評估中","notes":"靠近福和國中，老字號專科，自費果酸換膚與雷射量定"},
       {"id":"yh_21","district":"永和區","clientType":"prospect","name":"欣美診所 (醫美部)","address":"新北市永和區竹林路68號2樓","lat":25.0132,"lng":121.5192,"status":"red","equipment":"評估中","notes":"鄰近永和區公所，公教人員客群偏好穩定溫和抗老光療"},
@@ -599,7 +598,6 @@
       }
     };
 
-    /* 智慧複訪比對與提醒機制 */
     function checkFollowUpReminders() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -619,7 +617,6 @@
 
         const diffDays = Math.round((fDate - today) / (1000 * 60 * 60 * 24));
 
-        // 逾期未訪、今天到期、以及未來 3 天內即將到期
         if (diffDays <= 3) {
           pendingItems.push({
             clinic: c,
@@ -628,7 +625,6 @@
         }
       });
 
-      // 排序：逾期最久的排最前，再來是今天
       pendingItems.sort((a, b) => a.diffDays - b.diffDays);
 
       if (pendingItems.length === 0) {
@@ -668,7 +664,6 @@
         reminderList.appendChild(div);
       });
 
-      // 瀏覽器原生推播提醒 (如果已授權)
       if (Notification.permission === "granted") {
         const overdueOrToday = pendingItems.filter(p => p.diffDays <= 0);
         if (overdueOrToday.length > 0) {
@@ -694,7 +689,6 @@
       }
     };
 
-    // 點擊提醒卡片鏡頭瞬移並自動彈窗
     window.focusOnClinic = function(id) {
       const target = clinics.find(c => c.id === id);
       if (!target) return;
@@ -745,7 +739,6 @@
         let marker;
 
         if (isExisting) {
-          // 高級曜石黑底 + 香檳金邊框 + 星芒徽章 ⭐
           const vipIcon = L.divIcon({
             className: 'vip-marker-wrap',
             html: `
@@ -764,7 +757,6 @@
           });
           marker = L.marker([item.lat, item.lng], { icon: vipIcon }).addTo(map);
         } else {
-          // 陌開客戶：極簡俐落彩色圓點
           marker = L.circleMarker([item.lat, item.lng], {
             radius: 10,
             fillColor: colorMap[item.status] || '#ef4444',
@@ -990,12 +982,41 @@
       submitBtn.classList.remove('btn-update');
     };
 
+    /* 核心定位函式：三層階梯式降級比對 */
+    async function geocodeAddressWithFallback(rawAddress, detectedDistrict) {
+      // 清洗掉里、村、鄰等干擾字詞
+      let clean = rawAddress.replace(/.{1,3}[里村鄰]/g, '').trim();
+
+      // 第 1 級：清洗後的完整地址
+      let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(clean)}`);
+      let data = await res.json();
+      if (data && data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+
+      // 第 2 級：刪除門牌號碼與樓層，只保留到 路/街/巷/段
+      let streetOnly = clean.replace(/\d+.*[號樓fF-].*/g, '').trim();
+      if (streetOnly && streetOnly !== clean) {
+        res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(streetOnly)}`);
+        data = await res.json();
+        if (data && data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+      }
+
+      // 第 3 級：若仍找不到，降級至該行政區中心
+      if (districtCoords[detectedDistrict]) {
+        return {
+          lat: districtCoords[detectedDistrict].center[0],
+          lng: districtCoords[detectedDistrict].center[1]
+        };
+      }
+
+      return null;
+    }
+
     document.getElementById('clinicForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const editingId = document.getElementById('editingId').value;
       const submitBtn = document.getElementById('submitBtn');
-      const address = document.getElementById('address').value;
-      const name = document.getElementById('name').value;
+      const address = document.getElementById('address').value.trim();
+      const name = document.getElementById('name').value.trim();
       const clientType = document.getElementById('clientType').value;
       const followUpDate = document.getElementById('followUpDate').value;
       const detectedDistrict = detectDistrict(address);
@@ -1030,22 +1051,18 @@
       submitBtn.innerText = '正在定位並儲存雲端...';
 
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`);
-        const data = await res.json();
+        const coords = await geocodeAddressWithFallback(address, detectedDistrict);
 
-        if (data && data.length > 0) {
+        if (coords) {
           const newId = 'c_' + Date.now();
-          const lat = parseFloat(data[0].lat);
-          const lng = parseFloat(data[0].lon);
-
           const newClinic = {
             id: newId,
             clientType: clientType,
             district: detectedDistrict,
             name: name,
-            address: address,
-            lat: lat,
-            lng: lng,
+            address: address, // 完整門牌保留於資料庫
+            lat: coords.lat,
+            lng: coords.lng,
             status: clientType === 'existing' ? 'purple' : document.getElementById('status').value,
             equipment: document.getElementById('equipment').value,
             notes: document.getElementById('notes').value,
@@ -1060,7 +1077,7 @@
             currentDistrict = detectedDistrict;
           }
 
-          map.setView([lat, lng], 16);
+          map.setView([coords.lat, coords.lng], 16);
           e.target.reset();
         } else {
           alert('找不到這個地址，請確認有填寫行政區與正確路名！');
