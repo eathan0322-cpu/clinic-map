@@ -92,7 +92,7 @@
     .legend-item { display: flex; align-items: center; gap: 6px; color: #cbd5e1; font-size: 12px; cursor: pointer; padding: 3px 5px; border-radius: 4px; transition: 0.2s; }
     .legend-item:hover { background: #334155; }
 
-    .vip-marker-wrap { background: transparent; border: none; }
+    .vip-marker-wrap, .prospect-marker-wrap { background: transparent; border: none; }
 
     .leaflet-popup-content-wrapper { background: #1e293b; color: #f1f5f9; border-radius: 8px; }
     .leaflet-popup-tip { background: #1e293b; }
@@ -213,11 +213,11 @@
 
       <div class="form-group">
         <label>診所名稱</label>
-        <input type="text" id="name" placeholder="例如：康寶診所" required>
+        <input type="text" id="name" placeholder="例如：姩美肌膚診所" required>
       </div>
       <div class="form-group">
         <label>診所地址</label>
-        <input type="text" id="address" placeholder="例如：新北市板橋區民權路172號" required>
+        <input type="text" id="address" placeholder="例如：新北市三重區重陽路三段5巷28號" required>
       </div>
 
       <div class="form-group" id="statusFormGroup">
@@ -233,7 +233,7 @@
 
       <div class="form-group">
         <label>現有機台 / 競品與耗材需求</label>
-        <input type="text" id="equipment" placeholder="例如：Q+ & Core、探頭耗材量大">
+        <input type="text" id="equipment" placeholder="例如：雙倍提、Z音波、探頭耗材量大">
       </div>
 
       <div class="form-group">
@@ -249,13 +249,13 @@
 
       <div class="form-group">
         <label>戰情情報與下一步策略</label>
-        <textarea id="notes" rows="3" placeholder="例如：上午前往提報報價"></textarea>
+        <textarea id="notes" rows="3" placeholder="例如：安排Z音波&脈衝光 Demo"></textarea>
       </div>
       <button type="submit" id="submitBtn" class="btn-primary">定位並同步至雲端</button>
     </form>
 
     <div class="legend">
-      <div style="font-weight: bold; margin-bottom: 6px; color:#94a3b8;">階段色標與圖例（點擊可快速過濾）：</div>
+      <div style="font-weight: bold; margin-bottom: 6px; color:#94a3b8;">階段色標與圖例（所有標記皆可自由拖曳微調）：</div>
       <div class="legend-grid">
         <div class="legend-item" onclick="quickFilterStatus('red')">🔴 未探勘 / 迷霧</div>
         <div class="legend-item" onclick="quickFilterStatus('yellow')">🟡 初訪摸底</div>
@@ -422,7 +422,6 @@
 
         const diffDays = Math.round((fDate - today) / (1000 * 60 * 60 * 24));
 
-        // 擴大為 7 天內提醒
         if (diffDays <= 7) {
           pendingItems.push({
             clinic: c,
@@ -543,7 +542,7 @@
                 border-radius: 50%;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.5), 0 0 10px rgba(234, 179, 8, 0.45);
                 display: flex; align-items: center; justify-content: center;
-                font-size: 13px; line-height: 1; color: #facc15;
+                font-size: 13px; line-height: 1; color: #facc15; cursor: grab;
               ">⭐</div>
             `,
             iconSize: [26, 26],
@@ -551,26 +550,33 @@
           });
           marker = L.marker([item.lat, item.lng], { icon: vipIcon, draggable: true }).addTo(map);
         } else {
-          marker = L.circleMarker([item.lat, item.lng], {
-            radius: 10,
-            fillColor: colorMap[item.status] || '#ef4444',
-            color: '#ffffff',
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 0.95
-          }).addTo(map);
+          // 陌開客戶也改用 divIcon 支援拖曳校正
+          const pIcon = L.divIcon({
+            className: 'prospect-marker-wrap',
+            html: `
+              <div style="
+                width: 20px; height: 20px;
+                background-color: ${colorMap[item.status] || '#ef4444'};
+                border: 2px solid #ffffff;
+                border-radius: 50%;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+                cursor: grab;
+              "></div>
+            `,
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+          });
+          marker = L.marker([item.lat, item.lng], { icon: pIcon, draggable: true }).addTo(map);
         }
 
-        // 支援拖曳即時校正座標
-        if (marker.on) {
-          marker.on('dragend', function(e) {
-            const newPos = e.target.getLatLng();
-            clinicsRef.child(item.id).update({
-              lat: newPos.lat,
-              lng: newPos.lng
-            });
+        // 核心功能：全標記拖曳放開自動儲存新座標至 Firebase
+        marker.on('dragend', function(e) {
+          const newPos = e.target.getLatLng();
+          clinicsRef.child(item.id).update({
+            lat: newPos.lat,
+            lng: newPos.lng
           });
-        }
+        });
 
         const badgeClass = isExisting ? 'badge-existing' : 'badge-prospect';
         const badgeLabel = isExisting ? '⭐ 既有客戶（常態巡護/擴機）' : '🎯 陌開客戶（設備拓展）';
@@ -787,36 +793,39 @@
       submitBtn.classList.remove('btn-update');
     };
 
-    /* 真正智慧的後台定位器：
-       第0步：自動用【行政區 + 店名】去圖資搜（若地圖上早已存在該診所標記，100% 屋頂命中）
-       第1步：用完整門牌地址搜
-       第2步：降級用路段搜
-       第3步：行政區兜底
-    */
+    /* 真正強大的在地多階精準搜尋器 */
     async function smartGeocode(name, rawAddress, detectedDistrict) {
-      // 第 0 級：店名命中（最神準）
+      // 1. 先把地址字串徹底淨化（去掉里村鄰、去掉樓層）
+      let clean = rawAddress.replace(/.{1,3}[里村鄰]/g, '').trim();
+      let pureStreetNumber = clean.replace(/\d+[樓fF-].*/g, '').trim(); // 去除 1樓、2F
+
+      // 優先序 A：用【店名 + 行政區】查（若店家地標已有，100% 屋頂命中）
       if (name) {
         const queryName = `${detectedDistrict !== '其他' ? detectedDistrict : ''} ${name}`.trim();
         try {
           let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryName)}`);
           let data = await res.json();
-          if (data && data.length > 0) {
-            return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-          }
+          if (data && data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
         } catch(e) {}
       }
 
-      // 第 1 級：清洗後的完整門牌
-      let clean = rawAddress.replace(/.{1,3}[里村鄰]/g, '').trim();
+      // 優先序 B：去樓層後的純淨門牌（如：新北市三重區重陽路三段5巷28號）
+      try {
+        let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(pureStreetNumber)}`);
+        let data = await res.json();
+        if (data && data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+      } catch(e) {}
+
+      // 優先序 C：原始清洗地址
       try {
         let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(clean)}`);
         let data = await res.json();
         if (data && data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
       } catch(e) {}
 
-      // 第 2 級：刪除號碼樓層，退至路段
-      let streetOnly = clean.replace(/\d+.*[號樓fF-].*/g, '').trim();
-      if (streetOnly && streetOnly !== clean) {
+      // 優先序 D：降級退到路段/巷段
+      let streetOnly = pureStreetNumber.replace(/\d+.*[號].*/g, '').trim();
+      if (streetOnly && streetOnly !== pureStreetNumber) {
         try {
           let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(streetOnly)}`);
           let data = await res.json();
@@ -824,7 +833,7 @@
         } catch(e) {}
       }
 
-      // 第 3 級：行政區中心
+      // 優先序 E：行政區中心保底
       if (districtCoords[detectedDistrict]) {
         return {
           lat: districtCoords[detectedDistrict].center[0],
