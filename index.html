@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>新北基醫美戰情室 - 雙軌業務與即時搜尋版</title>
+  <title>雙北基醫美戰情室 - 雙軌業務與即時搜尋版</title>
   
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -42,6 +42,22 @@
     .btn-export-ppt { padding: 8px; background: #b45309; color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
     .btn-export-ppt:hover { background: #92400e; }
 
+    /* 智慧複訪提醒看板（動態收合） */
+    #reminderPanel { background: #0f172a; border: 1px solid #0284c7; border-radius: 12px; padding: 12px; margin-bottom: 14px; display: none; }
+    .reminder-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+    .reminder-title { font-size: 13px; font-weight: bold; color: #38bdf8; display: flex; align-items: center; gap: 6px; }
+    .reminder-badge { background: #ef4444; color: white; font-size: 10px; font-weight: bold; padding: 2px 7px; border-radius: 10px; }
+    .reminder-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .reminder-item { background: #1e293b; padding: 7px 10px; border-radius: 6px; font-size: 12px; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #64748b; cursor: pointer; transition: 0.2s; }
+    .reminder-item:hover { background: #334155; transform: translateX(2px); }
+    .rem-overdue { border-left-color: #ef4444 !important; }
+    .rem-today { border-left-color: #facc15 !important; }
+    .rem-upcoming { border-left-color: #38bdf8 !important; }
+    .rem-tag { font-size: 10px; font-weight: bold; padding: 1px 5px; border-radius: 3px; }
+    .tag-overdue { background: #7f1d1d; color: #fca5a5; }
+    .tag-today { background: #713f12; color: #fef08a; }
+    .tag-upcoming { background: #0c4a6e; color: #bae6fd; }
+
     .dashboard { background: #0f172a; padding: 14px; border-radius: 12px; margin-bottom: 14px; border: 1px solid #334155; }
     .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
     .dash-title { font-size: 12px; color: #94a3b8; }
@@ -78,7 +94,6 @@
     .legend-item { display: flex; align-items: center; gap: 6px; color: #cbd5e1; font-size: 12px; cursor: pointer; padding: 3px 5px; border-radius: 4px; transition: 0.2s; }
     .legend-item:hover { background: #334155; }
 
-    /* 既有客戶黑曜金星鑽 Marker 容器清除原生邊界 */
     .vip-marker-wrap { background: transparent; border: none; }
 
     .leaflet-popup-content-wrapper { background: #1e293b; color: #f1f5f9; border-radius: 8px; }
@@ -158,6 +173,18 @@
         <button type="button" class="btn-export-excel" onclick="exportToExcel()">📊 匯出 Excel (.xlsx)</button>
         <button type="button" class="btn-export-ppt" onclick="exportToPPT()">📑 匯出簡報 (.pptx)</button>
       </div>
+    </div>
+
+    <!-- 智慧複訪追蹤看板（無任務時完全隱藏） -->
+    <div id="reminderPanel">
+      <div class="reminder-header" onclick="toggleReminderList()">
+        <div class="reminder-title">
+          <span>🔔 拜訪追蹤提醒</span>
+          <span class="reminder-badge" id="reminderCount">0</span>
+        </div>
+        <span id="reminderArrow" style="font-size:11px; color:#94a3b8;">▼ 展開</span>
+      </div>
+      <div class="reminder-list" id="reminderList" style="display:none;"></div>
     </div>
 
     <div class="dashboard">
@@ -515,7 +542,9 @@
         lastVisitDate: item.lastVisitDate || '',
         followUpDate: item.followUpDate || ''
       }));
+      
       renderMap();
+      checkFollowUpReminders();
       document.getElementById('syncStatus').innerText = '🟢 雲端同步完成';
     });
 
@@ -568,6 +597,122 @@
       } else {
         statusGroup.style.display = 'block';
       }
+    };
+
+    /* 智慧複訪比對與提醒機制 */
+    function checkFollowUpReminders() {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const reminderPanel = document.getElementById('reminderPanel');
+      const reminderList = document.getElementById('reminderList');
+      const reminderCount = document.getElementById('reminderCount');
+      
+      reminderList.innerHTML = '';
+      const pendingItems = [];
+
+      clinics.forEach(c => {
+        if (!c.followUpDate) return;
+        const [y, m, d] = c.followUpDate.split('-').map(Number);
+        const fDate = new Date(y, m - 1, d);
+        fDate.setHours(0, 0, 0, 0);
+
+        const diffDays = Math.round((fDate - today) / (1000 * 60 * 60 * 24));
+
+        // 逾期未訪、今天到期、以及未來 3 天內即將到期
+        if (diffDays <= 3) {
+          pendingItems.push({
+            clinic: c,
+            diffDays: diffDays
+          });
+        }
+      });
+
+      // 排序：逾期最久的排最前，再來是今天
+      pendingItems.sort((a, b) => a.diffDays - b.diffDays);
+
+      if (pendingItems.length === 0) {
+        reminderPanel.style.display = 'none';
+        return;
+      }
+
+      reminderPanel.style.display = 'block';
+      reminderCount.innerText = pendingItems.length;
+
+      pendingItems.forEach(item => {
+        const c = item.clinic;
+        let borderClass = 'rem-upcoming';
+        let tagClass = 'tag-upcoming';
+        let statusText = `${item.diffDays}天後到期`;
+
+        if (item.diffDays < 0) {
+          borderClass = 'rem-overdue';
+          tagClass = 'tag-overdue';
+          statusText = `已逾期 ${Math.abs(item.diffDays)} 天`;
+        } else if (item.diffDays === 0) {
+          borderClass = 'rem-today';
+          tagClass = 'tag-today';
+          statusText = `今日預計拜訪`;
+        }
+
+        const div = document.createElement('div');
+        div.className = `reminder-item ${borderClass}`;
+        div.onclick = () => focusOnClinic(c.id);
+        div.innerHTML = `
+          <div>
+            <strong style="color:#f1f5f9;">${c.name}</strong>
+            <span style="font-size:11px; color:#94a3b8; margin-left:4px;">(${c.district})</span>
+          </div>
+          <span class="rem-tag ${tagClass}">${statusText}</span>
+        `;
+        reminderList.appendChild(div);
+      });
+
+      // 瀏覽器原生推播提醒 (如果已授權)
+      if (Notification.permission === "granted") {
+        const overdueOrToday = pendingItems.filter(p => p.diffDays <= 0);
+        if (overdueOrToday.length > 0) {
+          new Notification("🔔 醫美戰情室：今日拜訪追蹤", {
+            body: `你有 ${overdueOrToday.length} 家診所待複訪或已逾期，點擊進入查看！`,
+            icon: "https://cdn-icons-png.flaticon.com/512/854/854878.png"
+          });
+        }
+      } else if (Notification.permission !== "denied") {
+        Notification.requestPermission();
+      }
+    }
+
+    window.toggleReminderList = function() {
+      const list = document.getElementById('reminderList');
+      const arrow = document.getElementById('reminderArrow');
+      if (list.style.display === 'none') {
+        list.style.display = 'flex';
+        arrow.innerText = '▲ 收合';
+      } else {
+        list.style.display = 'none';
+        arrow.innerText = '▼ 展開';
+      }
+    };
+
+    // 點擊提醒卡片鏡頭瞬移並自動彈窗
+    window.focusOnClinic = function(id) {
+      const target = clinics.find(c => c.id === id);
+      if (!target) return;
+
+      if (currentDistrict !== 'ALL' && currentDistrict !== target.district) {
+        document.getElementById('districtFilter').value = target.district;
+        currentDistrict = target.district;
+        renderMap();
+      }
+
+      map.setView([target.lat, target.lng], 16);
+      setTimeout(() => {
+        const marker = markers.find(m => {
+          const latLng = m.getLatLng();
+          return Math.abs(latLng.lat - target.lat) < 0.0001 && Math.abs(latLng.lng - target.lng) < 0.0001;
+        });
+        if (marker) marker.openPopup();
+      }, 100);
     };
 
     function getFilteredClinics() {
