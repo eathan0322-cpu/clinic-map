@@ -41,9 +41,6 @@
     .btn-export-ppt { padding: 8px; background: #b45309; color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
     .btn-export-ppt:hover { background: #92400e; }
 
-    .btn-batch-calibrate { width: 100%; margin-top: 8px; padding: 8px; background: #3b82f6; color: white; border: 1px solid #60a5fa; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-    .btn-batch-calibrate:hover { background: #2563eb; }
-
     #reminderPanel { background: #0f172a; border: 1px solid #0284c7; border-radius: 12px; padding: 12px; margin-bottom: 14px; display: none; }
     .reminder-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
     .reminder-title { font-size: 13px; font-weight: bold; color: #38bdf8; display: flex; align-items: center; gap: 6px; }
@@ -181,9 +178,6 @@
         <button type="button" class="btn-export-excel" onclick="exportToExcel()">📊 匯出 Excel (.xlsx)</button>
         <button type="button" class="btn-export-ppt" onclick="exportToPPT()">📑 匯出簡報 (.pptx)</button>
       </div>
-
-      <!-- 一鍵精準升級板橋區按鈕 -->
-      <button type="button" id="calibrateBtn" class="btn-batch-calibrate" onclick="calibrateBanqiao()">🎯 一鍵精準校正板橋區全數座標 (保留備忘)</button>
     </div>
 
     <!-- 智慧複訪提醒看板（7天內即將到期/逾期） -->
@@ -297,48 +291,6 @@
     const db = firebase.database();
     const clinicsRef = db.ref('clinics');
 
-    // 板橋區 38 家校正後精確經緯度表
-    const calibratedBanqiaoCoords = {
-      "bq_01": { lat: 25.00842, lng: 121.46075 },
-      "bq_02": { lat: 25.00858, lng: 121.45995 },
-      "bq_03": { lat: 25.01072, lng: 121.46231 },
-      "bq_04": { lat: 25.01085, lng: 121.46242 },
-      "bq_05": { lat: 25.01085, lng: 121.46242 },
-      "bq_06": { lat: 25.00938, lng: 121.45975 },
-      "bq_07": { lat: 25.01235, lng: 121.46612 },
-      "bq_08": { lat: 25.00965, lng: 121.45718 },
-      "bq_09": { lat: 25.01185, lng: 121.45625 },
-      "bq_10": { lat: 25.00945, lng: 121.46515 },
-      "bq_11": { lat: 25.01595, lng: 121.46288 },
-      "bq_12": { lat: 25.01638, lng: 121.46325 },
-      "bq_13": { lat: 25.01542, lng: 121.46245 },
-      "bq_14": { lat: 25.01915, lng: 121.46585 },
-      "bq_15": { lat: 25.02195, lng: 121.46745 },
-      "bq_16": { lat: 25.02315, lng: 121.46895 },
-      "bq_17": { lat: 25.02185, lng: 121.46788 },
-      "bq_18": { lat: 25.02265, lng: 121.46855 },
-      "bq_19": { lat: 25.02245, lng: 121.46765 },
-      "bq_20": { lat: 25.02645, lng: 121.47265 },
-      "bq_21": { lat: 25.02785, lng: 121.47395 },
-      "bq_22": { lat: 25.02925, lng: 121.47465 }, // 劉仲彥雙十路精準屋頂
-      "bq_23": { lat: 25.02795, lng: 121.47455 },
-      "bq_24": { lat: 25.02585, lng: 121.46385 },
-      "bq_25": { lat: 25.01315, lng: 121.47085 },
-      "bq_26": { lat: 25.01925, lng: 121.48115 },
-      "bq_27": { lat: 25.01655, lng: 121.47915 },
-      "bq_28": { lat: 25.01755, lng: 121.48125 },
-      "bq_29": { lat: 25.01865, lng: 121.48545 },
-      "bq_30": { lat: 25.01215, lng: 121.48095 },
-      "bq_31": { lat: 24.99615, lng: 121.44815 },
-      "bq_32": { lat: 25.00115, lng: 121.45245 },
-      "bq_33": { lat: 25.03185, lng: 121.47895 }, // 研知文化路二段精準門牌
-      "bq_34": { lat: 25.00945, lng: 121.46325 },
-      "bq_35": { lat: 25.01638, lng: 121.46325 },
-      "bq_36": { lat: 24.99625, lng: 121.44825 },
-      "bq_37": { lat: 25.02315, lng: 121.46825 },
-      "bq_38": { lat: 25.00955, lng: 121.45995 }
-    };
-
     const districtCoords = {
       'ALL': { center: [25.065, 121.555], zoom: 11 },
       '板橋區': { center: [25.0135, 121.4645], zoom: 14 },
@@ -418,37 +370,6 @@
       checkFollowUpReminders();
       document.getElementById('syncStatus').innerText = '🟢 雲端同步完成';
     });
-
-    // 一鍵安全更新板橋區 38 家座標（保留所有自訂備忘、日期與狀態）
-    window.calibrateBanqiao = async function() {
-      const btn = document.getElementById('calibrateBtn');
-      btn.innerText = '正在精準校正板橋區座標中...';
-      btn.disabled = true;
-
-      const snapshot = await clinicsRef.once('value');
-      const data = snapshot.val();
-      if (!data) return;
-
-      const updates = {};
-      let count = 0;
-
-      for (let id in calibratedBanqiaoCoords) {
-        if (data[id]) { // 只更新目前還存在資料庫的診所，已刪除的不會被無端復活
-          updates[`${id}/lat`] = calibratedBanqiaoCoords[id].lat;
-          updates[`${id}/lng`] = calibratedBanqiaoCoords[id].lng;
-          count++;
-        }
-      }
-
-      await clinicsRef.update(updates);
-      btn.innerText = `✅ 板橋區 ${count} 家診所已全數精準歸位！`;
-      btn.style.background = '#059669';
-      btn.style.borderColor = '#34d399';
-
-      setTimeout(() => {
-        btn.style.display = 'none'; // 校正完成後自動收合隱藏
-      }, 2500);
-    };
 
     function detectDistrict(addr) {
       if (addr.includes('基隆')) return '基隆市';
@@ -669,7 +590,6 @@
           marker = L.marker([item.lat, item.lng], { icon: pIcon, draggable: true }).addTo(map);
         }
 
-        // 自由拖曳放開即存
         marker.on('dragend', function(e) {
           const newPos = e.target.getLatLng();
           clinicsRef.child(item.id).update({
