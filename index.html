@@ -16,7 +16,6 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-  <!-- 匯出 Excel 與 PPT 函式庫 -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 
@@ -42,7 +41,6 @@
     .btn-export-ppt { padding: 8px; background: #b45309; color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
     .btn-export-ppt:hover { background: #92400e; }
 
-    /* 智慧複訪提醒看板（動態收合） */
     #reminderPanel { background: #0f172a; border: 1px solid #0284c7; border-radius: 12px; padding: 12px; margin-bottom: 14px; display: none; }
     .reminder-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
     .reminder-title { font-size: 13px; font-weight: bold; color: #38bdf8; display: flex; align-items: center; gap: 6px; }
@@ -175,11 +173,11 @@
       </div>
     </div>
 
-    <!-- 智慧複訪提醒看板（動態收合） -->
+    <!-- 智慧複訪提醒看板（7天內即將到期/逾期） -->
     <div id="reminderPanel">
       <div class="reminder-header" onclick="toggleReminderList()">
         <div class="reminder-title">
-          <span>🔔 拜訪追蹤提醒</span>
+          <span>🔔 近7天拜訪追蹤</span>
           <span class="reminder-badge" id="reminderCount">0</span>
         </div>
         <span id="reminderArrow" style="font-size:11px; color:#94a3b8;">▼ 展開</span>
@@ -215,11 +213,11 @@
 
       <div class="form-group">
         <label>診所名稱</label>
-        <input type="text" id="name" placeholder="例如：康博診所" required>
+        <input type="text" id="name" placeholder="例如：康寶診所" required>
       </div>
       <div class="form-group">
         <label>診所地址</label>
-        <input type="text" id="address" placeholder="例如：基隆市七堵區南興路99號" required>
+        <input type="text" id="address" placeholder="例如：新北市板橋區民權路172號" required>
       </div>
 
       <div class="form-group" id="statusFormGroup">
@@ -235,7 +233,7 @@
 
       <div class="form-group">
         <label>現有機台 / 競品與耗材需求</label>
-        <input type="text" id="equipment" placeholder="例如：Q+ 音波、皮秒雷射、探頭耗材量大">
+        <input type="text" id="equipment" placeholder="例如：Q+ & Core、探頭耗材量大">
       </div>
 
       <div class="form-group">
@@ -251,7 +249,7 @@
 
       <div class="form-group">
         <label>戰情情報與下一步策略</label>
-        <textarea id="notes" rows="3" placeholder="例如：店長已換人，上午10點前往Q+探頭報價"></textarea>
+        <textarea id="notes" rows="3" placeholder="例如：上午前往提報報價"></textarea>
       </div>
       <button type="submit" id="submitBtn" class="btn-primary">定位並同步至雲端</button>
     </form>
@@ -285,192 +283,6 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const clinicsRef = db.ref('clinics');
-
-    const initialVerifiedClinics = [
-      // 板橋區 (38)
-      {"id":"bq_01","district":"板橋區","clientType":"prospect","name":"板橋光澤診所","address":"新北市板橋區館前東路2號","lat":25.0075,"lng":121.4619,"status":"red","equipment":"評估中","notes":"光澤旗艦大本營，光電與微整主力院所"},
-      {"id":"bq_02","district":"板橋區","clientType":"prospect","name":"淨妍醫美診所 (板橋分院)","address":"新北市板橋區重慶路8號3樓","lat":25.0089,"lng":121.4597,"status":"red","equipment":"評估中","notes":"連鎖大院，音波與微整量極大"},
-      {"id":"bq_03","district":"板橋區","clientType":"prospect","name":"星和診所 (板橋)","address":"新北市板橋區中山路一段67號4樓","lat":25.0112,"lng":121.4623,"status":"red","equipment":"評估中","notes":"星醫美學連鎖核心院所"},
-      {"id":"bq_04","district":"板橋區","clientType":"prospect","name":"元晨診所 (板橋店)","address":"新北市板橋區中山路一段69號8樓","lat":25.0113,"lng":121.4625,"status":"red","equipment":"評估中","notes":"府中商圈主力自費微整"},
-      {"id":"bq_05","district":"板橋區","clientType":"prospect","name":"書拉密美學診所 (板橋府中)","address":"新北市板橋區中山路一段69號6樓之1","lat":25.0113,"lng":121.4625,"status":"red","equipment":"評估中","notes":"府中商圈自費微整光電"},
-      {"id":"bq_06","district":"板橋區","clientType":"prospect","name":"樂菲整形外科診所","address":"新北市板橋區中山路一段15號3樓","lat":25.0094,"lng":121.4595,"status":"red","equipment":"評估中","notes":"府中站星巴克樓上手術與微整"},
-      {"id":"bq_07","district":"板橋區","clientType":"prospect","name":"宏益信合美診所","address":"新北市板橋區新民街37號3樓","lat":25.0128,"lng":121.4665,"status":"red","equipment":"評估中","notes":"周林興院長，整形外科與微整兼營"},
-      {"id":"bq_08","district":"板橋區","clientType":"prospect","name":"趙昭明皮膚科診所","address":"新北市板橋區南門街27號","lat":25.0088,"lng":121.4578,"status":"red","equipment":"評估中","notes":"權威名醫大院，門診量體極大"},
-      {"id":"bq_09","district":"板橋區","clientType":"prospect","name":"童話皮膚專科診所","address":"新北市板橋區縣民大道一段295號","lat":25.0118,"lng":121.4552,"status":"red","equipment":"評估中","notes":"新板特區高階原廠光電大院"},
-      {"id":"bq_10","district":"板橋區","clientType":"prospect","name":"劉思楨許永川皮膚科診所","address":"新北市板橋區民族路60號","lat":25.0091,"lng":121.4658,"status":"red","equipment":"評估中","notes":"板橋指標老字號皮膚科大院"},
-      {"id":"bq_11","district":"板橋區","clientType":"prospect","name":"久明診所 (板橋總院)","address":"新北市板橋區文化路一段137號3樓","lat":25.0162,"lng":121.4631,"status":"red","equipment":"評估中","notes":"楊勝君院長，板橋指標醫美大院"},
-      {"id":"bq_12","district":"板橋區","clientType":"prospect","name":"美麗爾美學眼科診所 (板橋店)","address":"新北市板橋區文化路一段145號2樓","lat":25.0166,"lng":121.4635,"status":"red","equipment":"評估中","notes":"陳美齡醫師體系，光電微整大戶"},
-      {"id":"bq_13","district":"板橋區","clientType":"prospect","name":"張英睿皮膚專科診所","address":"新北市板橋區文化路一段118號","lat":25.0156,"lng":121.4628,"status":"red","equipment":"評估中","notes":"高階光電微整指標皮膚專科"},
-      {"id":"bq_14","district":"板橋區","clientType":"prospect","name":"信曜皮膚科診所","address":"新北市板橋區文化路一段218號","lat":25.0195,"lng":121.4655,"status":"red","equipment":"評估中","notes":"文化路主要自費/健保皮膚科"},
-      {"id":"bq_15","district":"板橋區","clientType":"prospect","name":"熠美時尚醫美診所","address":"新北市板橋區文化路一段351號2樓","lat":25.0222,"lng":121.4676,"status":"red","equipment":"評估中","notes":"新埔商圈自費微整光電"},
-      {"id":"bq_16","district":"板橋區","clientType":"prospect","name":"尚品皮膚科診所","address":"新北市板橋區文化路一段419-1號","lat":25.0232,"lng":121.4695,"status":"red","equipment":"評估中","notes":"新埔捷運出口旁自費微整"},
-      {"id":"bq_17","district":"板橋區","clientType":"prospect","name":"采醫璟麗診所","address":"新北市板橋區民生路二段209號","lat":25.0223,"lng":121.4678,"status":"red","equipment":"評估中","notes":"新埔捷運站2號出口旁"},
-      {"id":"bq_18","district":"板橋區","clientType":"prospect","name":"莘美醫診所 (欣莘時尚美學)","address":"新北市板橋區民生路二段240巷14號3樓","lat":25.0228,"lng":121.4682,"status":"red","equipment":"評估中","notes":"新埔馥華大樓，體雕抽脂拉提"},
-      {"id":"bq_19","district":"板橋區","clientType":"prospect","name":"吳峰璋皮膚科診所","address":"新北市板橋區民生路二段229號","lat":25.0226,"lng":121.4675,"status":"red","equipment":"評估中","notes":"新埔站老牌皮膚科診所"},
-      {"id":"bq_20","district":"板橋區","clientType":"prospect","name":"黃皮膚科診所","address":"新北市板橋區文化路二段10號","lat":25.0258,"lng":121.4721,"status":"red","equipment":"評估中","notes":"江子翠門診量體極大院所"},
-      {"id":"bq_21","district":"板橋區","clientType":"prospect","name":"耀美醫美診所","address":"新北市板橋區文化路二段133號","lat":25.0275,"lng":121.4735,"status":"red","equipment":"評估中","notes":"江子翠捷運生活圈自費醫美"},
-      {"id":"bq_22","district":"板橋區","clientType":"prospect","name":"劉仲彥皮膚專科診所","address":"新北市板橋區雙十路二段167號","lat":25.0292,"lng":121.4755,"status":"red","equipment":"評估中","notes":"江子翠指標皮膚專科，口碑佳"},
-      {"id":"bq_23","district":"板橋區","clientType":"prospect","name":"江致德皮膚科診所","address":"新北市板橋區雙十路二段42-4號","lat":25.0281,"lng":121.4741,"status":"red","equipment":"評估中","notes":"江子翠雙十路商圈"},
-      {"id":"bq_24","district":"板橋區","clientType":"prospect","name":"板橋四維皮膚科診所","address":"新北市板橋區四維路150號2樓","lat":25.0261,"lng":121.4641,"status":"red","equipment":"評估中","notes":"新埔商圈指標皮膚科，星和聯盟"},
-      {"id":"bq_25","district":"板橋區","clientType":"prospect","name":"喬美整形外科診所","address":"新北市板橋區漢生東路178號2樓","lat":25.0135,"lng":121.4705,"status":"red","equipment":"評估中","notes":"長庚團隊主持，整形與微整"},
-      {"id":"bq_26","district":"板橋區","clientType":"prospect","name":"京澄皮膚專科診所","address":"新北市板橋區三民路一段183號","lat":25.0195,"lng":121.4815,"status":"red","equipment":"評估中","notes":"埔墘三民路高質感皮膚專科，有微整自費"},
-      {"id":"bq_27","district":"板橋區","clientType":"prospect","name":"大鈞醫學美容中心","address":"新北市板橋區中山路二段88號3樓","lat":25.0168,"lng":121.4795,"status":"red","equipment":"評估中","notes":"埔墘商圈指標大型醫美中心"},
-      {"id":"bq_28","district":"板橋區","clientType":"prospect","name":"皮醫師皮膚專科診所","address":"新北市板橋區中山路二段172號","lat":25.0179,"lng":121.4815,"status":"red","equipment":"評估中","notes":"埔墘商圈自費微整光電"},
-      {"id":"bq_29","district":"板橋區","clientType":"prospect","name":"曾皮膚科診所","address":"新北市板橋區中山路二段365號","lat":25.0188,"lng":121.4858,"status":"red","equipment":"評估中","notes":"埔墘在地老牌皮膚專科"},
-      {"id":"bq_30","district":"板橋區","clientType":"prospect","name":"何文藻皮膚科診所","address":"新北市板橋區三民路二段32號","lat":25.0125,"lng":121.4812,"status":"red","equipment":"評估中","notes":"三民路家樂福商圈"},
-      {"id":"bq_31","district":"板橋區","clientType":"prospect","name":"法邑極緻美學診所","address":"新北市板橋區四川路二段107號","lat":24.9968,"lng":121.4485,"status":"red","equipment":"評估中","notes":"亞東生活圈高質感微整光電"},
-      {"id":"bq_32","district":"板橋區","clientType":"prospect","name":"雅丰美膚診所 (板橋)","address":"新北市板橋區四川路一段326號","lat":25.0015,"lng":121.4528,"status":"red","equipment":"評估中","notes":"雅丰體系分院，抗老拉提大戶"},
-      {"id":"bq_33","district":"板橋區","clientType":"prospect","name":"研知診所","address":"新北市板橋區文化路二段330號","lat":25.0315,"lng":121.4782,"status":"red","equipment":"評估中","notes":"江子翠整棟1~4樓自費光電拉提大院"},
-      {"id":"bq_34","district":"板橋區","clientType":"prospect","name":"靚世紀醫美診所 (板橋總院)","address":"新北市板橋區民族路34巷18號2樓","lat":25.0098,"lng":121.4635,"status":"red","equipment":"評估中","notes":"老牌連鎖遷址新點，光電與微整耗材量大"},
-      {"id":"bq_35","district":"板橋區","clientType":"prospect","name":"尚水美博醫美診所","address":"新北市板橋區文化路一段145號3樓之1","lat":25.0166,"lng":121.4635,"status":"red","equipment":"評估中","notes":"新埔站旁，主攻眼整外、拉皮與微整光電"},
-      {"id":"bq_36","district":"板橋區","clientType":"prospect","name":"秋泉診所 (秋泉醫美)","address":"新北市板橋區四川路二段105號","lat":24.9968,"lng":121.4484,"status":"red","equipment":"評估中","notes":"亞東生活圈戴醫師主持，自費醫美光療"},
-      {"id":"bq_37","district":"板橋區","clientType":"prospect","name":"維格皮膚科診所 (新埔)","address":"新北市板橋區民生路二段251號3樓","lat":25.0235,"lng":121.4685,"status":"red","equipment":"評估中","notes":"維格體系板橋據點，高階光電與微整大戶"},
-      {"id":"bq_38","district":"板橋區","clientType":"prospect","name":"板橋美麗爾診所 (府中)","address":"新北市板橋區中山路一段19號4樓之1","lat":25.0096,"lng":121.4598,"status":"red","equipment":"評估中","notes":"府中站旁美麗爾分院，微整光電重鎮"},
-
-      // 新莊區 (35)
-      {"id":"xz_01","district":"新莊區","clientType":"prospect","name":"馨田診所","address":"新北市新莊區思源路516號","lat":25.05553,"lng":121.46024,"status":"yellow","equipment":"海芙三代","notes":"思源路指標大院，目前使用海芙三代，音波自費翻桌率高"},
-      {"id":"xz_02","district":"新莊區","clientType":"prospect","name":"丰森醫美診所","address":"新北市新莊區思源路420號","lat":25.05325,"lng":121.46011,"status":"orange","equipment":"美國音波二代、媚必提","notes":"配備美音二代、媚必提，主攻高階抗老與光電自費"},
-      {"id":"xz_03","district":"新莊區","clientType":"prospect","name":"悠美診所（新莊分院）","address":"新北市新莊區思源路553號2樓","lat":25.0571,"lng":121.4598,"status":"red","equipment":"評估中","notes":"連鎖高階品牌分院，主力為原廠高階光電與體雕設備"},
-      {"id":"xz_04","district":"新莊區","clientType":"prospect","name":"晶漾時尚醫美診所（新莊院）","address":"新北市新莊區幸福路780號","lat":25.0492,"lng":121.4468,"status":"red","equipment":"評估中","notes":"佳瑪商圈核心，手術、微整與光電雙軌營運"},
-      {"id":"xz_05","district":"新莊區","clientType":"prospect","name":"淨妍醫美診所（新莊分院）","address":"新北市新莊區幸福路758號2樓","lat":25.0490,"lng":121.4475,"status":"red","equipment":"評估中","notes":"連鎖微整大戶，音波拉提與針劑微整走高翻桌率模式"},
-      {"id":"xz_06","district":"新莊區","clientType":"prospect","name":"麗姿添身美學診所","address":"新北市新莊區幸福路736號2樓","lat":25.0488,"lng":121.4485,"status":"red","equipment":"評估中","notes":"幸福路核心商圈，自費皮秒、音波與微整針劑主力"},
-      {"id":"xz_07","district":"新莊區","clientType":"prospect","name":"臻美皮膚科診所","address":"新北市新莊區幸福路563號","lat":25.0482,"lng":121.4532,"status":"red","equipment":"評估中","notes":"幸福路高人氣專科，主攻痘疤雷射光電與自費微整"},
-      {"id":"xz_08","district":"新莊區","clientType":"prospect","name":"雅美姬時尚診所（新莊分院）","address":"新北市新莊區幸福東路110號","lat":25.0465,"lng":121.4621,"status":"red","equipment":"評估中","notes":"鄰近副都心交界，客群注重性價比與抗老微整"},
-      {"id":"xz_09","district":"新莊區","clientType":"prospect","name":"仁佑皮膚科診所","address":"新北市新莊區中平路82巷8號","lat":25.0452,"lng":121.4452,"status":"red","equipment":"評估中","notes":"新莊高中旁老牌專科，健保帶自費微整光療"},
-      {"id":"xz_10","district":"新莊區","clientType":"prospect","name":"聖路加皮膚科診所","address":"新北市新莊區中港路263號","lat":25.0435,"lng":121.4518,"status":"red","equipment":"評估中","notes":"中港國小旁指標專科，光療與局部微整針劑量穩"},
-      {"id":"xz_11","district":"新莊區","clientType":"prospect","name":"光彩時尚美學診所","address":"新北市新莊區中原東路168號","lat":25.0568,"lng":121.4555,"status":"red","equipment":"評估中","notes":"宏匯廣場周邊高資產住戶群，偏好非侵入高階拉提"},
-      {"id":"xz_12","district":"新莊區","clientType":"prospect","name":"尚禾美學診所","address":"新北市新莊區福德三街28號","lat":25.0542,"lng":121.4645,"status":"red","equipment":"評估中","notes":"頭前重劃區高質感社區型醫美，主打拉提與私密光電"},
-      {"id":"xz_13","district":"新莊區","clientType":"prospect","name":"昕曜皮膚專科診所","address":"新北市新莊區化成路382號","lat":25.0505,"lng":121.4632,"status":"red","equipment":"評估中","notes":"新生代專科醫師團隊，儀器設備升級意願高"},
-      {"id":"xz_14","district":"新莊區","clientType":"prospect","name":"依定美時尚診所（新莊總院）","address":"新北市新莊區中正路231號2樓","lat":25.0362,"lng":121.4521,"status":"red","equipment":"評估中","notes":"新莊捷運站旁老牌指標連鎖，微整、光電與線雕量體大"},
-      {"id":"xz_15","district":"新莊區","clientType":"prospect","name":"蔡瑞芳皮膚科診所","address":"新北市新莊區中正路282號","lat":25.0368,"lng":121.4502,"status":"red","equipment":"評估中","notes":"捷運站口老牌權威名醫大院，門診量體龐大，具深厚自費客底"},
-      {"id":"xz_16","district":"新莊區","clientType":"prospect","name":"欣民診所（醫美部）","address":"新北市中正路383號","lat":25.0345,"lng":121.4421,"status":"red","equipment":"評估中","notes":"輔大生活圈老字號院所，兼營家醫與自費微整雷射"},
-      {"id":"xz_17","district":"新莊區","clientType":"prospect","name":"新泰皮膚科診所","address":"新北市新莊區新泰路203號","lat":25.0401,"lng":121.4498,"status":"red","equipment":"評估中","notes":"新泰路核心地段專科，微整與除斑雷射自費轉化率高"},
-      {"id":"xz_18","district":"新莊區","clientType":"prospect","name":"李皮膚科診所","address":"新北市新莊區新泰路88號","lat":25.0378,"lng":121.4512,"status":"red","equipment":"評估中","notes":"新莊老街商圈資深名醫診所，在地自費除斑保養客底深"},
-      {"id":"xz_19","district":"新莊區","clientType":"prospect","name":"民安皮膚科診所","address":"新北市新莊區民安西路62號","lat":25.0165,"lng":121.4235,"status":"red","equipment":"評估中","notes":"下新莊最具代表性老牌專科，門診人流極大"},
-      {"id":"xz_20","district":"新莊區","clientType":"prospect","name":"鴻金寶美學診所","address":"新北市新莊區民安路188巷5號3樓","lat":25.0192,"lng":121.4258,"status":"red","equipment":"評估中","notes":"鴻金寶商圈核心，年輕客群皮秒、除毛與入門音波"},
-      {"id":"xz_21","district":"新莊區","clientType":"prospect","name":"優美皮膚科診所","address":"新北市新莊區建福路59號","lat":25.0215,"lng":121.4312,"status":"red","equipment":"評估中","notes":"後港生活圈在地專科，自費換膚與基礎光電穩定"},
-      {"id":"xz_22","district":"新莊區","clientType":"prospect","name":"輔大醫院附設醫學美容中心","address":"新北市新莊區貴子路69號","lat":25.0358,"lng":121.4278,"status":"red","equipment":"評估中","notes":"醫學中心級美容中心，醫師陣容完整，耗材規範高"},
-      {"id":"xz_23","district":"新莊區","clientType":"prospect","name":"宏泰皮膚科診所","address":"新北市新莊區自立街198號","lat":25.0458,"lng":121.4562,"status":"red","equipment":"評估中","notes":"自立街生活圈專科，青春痘照光與果酸煥膚主力"},
-      {"id":"xz_24","district":"新莊區","clientType":"prospect","name":"恩緹時尚醫美診所","address":"新北市新莊區思源路332巷2號","lat":25.0489,"lng":121.4592,"status":"red","equipment":"評估中","notes":"捷運幸福站生活圈，微整針劑與非侵入緊緻療程"},
-      {"id":"xz_25","district":"新莊區","clientType":"prospect","name":"美加美學診所（新莊院）","address":"新北市新莊區幸福路672號","lat":25.0485,"lng":121.4501,"status":"red","equipment":"評估中","notes":"連鎖醫美體系，以音波拉提與玻尿酸填充為主"},
-      {"id":"xz_26","district":"新莊區","clientType":"prospect","name":"晶緻美學診所（新莊分院）","address":"新北市新莊區幸福路817巷6號","lat":25.0498,"lng":121.4452,"status":"red","equipment":"評估中","notes":"幸福商圈靜巷預約制院所，主攻熟客抗老拉提與肉毒"},
-      {"id":"xz_27","district":"新莊區","clientType":"prospect","name":"儷寶得皮膚科診所（新莊分部）","address":"新北市中德街18號","lat":25.0582,"lng":121.4528,"status":"red","equipment":"評估中","notes":"整合性皮膚光電中心，主打斑點痘疤與雷射複合治療"},
-      {"id":"xz_28","district":"新莊區","clientType":"prospect","name":"雅緹美學診所","address":"新北市新莊區福美街126號","lat":25.0525,"lng":121.4618,"status":"red","equipment":"評估中","notes":"住宅區社區型診所，主推電音波拉皮與日常微整維護"},
-      {"id":"xz_29","district":"新莊區","clientType":"prospect","name":"康緹醫美診所","address":"新北市新莊區中正路729號2樓","lat":25.0255,"lng":121.4182,"status":"red","equipment":"評估中","notes":"捷運丹鳳站出口旁，主攻年輕上班族微整與皮秒雷射"},
-      {"id":"xz_30","district":"新莊區","clientType":"prospect","name":"新莊美無極診所","address":"新北市新莊區公園路58號","lat":25.0392,"lng":121.4525,"status":"red","equipment":"評估中","notes":"新莊運動公園旁，專注抗老拉提、音波與美體雕塑"},
-      {"id":"xz_31","district":"新莊區","clientType":"prospect","name":"欣妍皮膚科診所","address":"新北市中原路135號","lat":25.0515,"lng":121.4512,"status":"red","equipment":"評估中","notes":"中原商圈高人氣專科，自費光療與微整針劑量穩"},
-      {"id":"xz_32","district":"新莊區","clientType":"prospect","name":"研美學診所","address":"新北市新莊區中央路236號","lat":25.0601,"lng":121.4535,"status":"red","equipment":"評估中","notes":"副都心大道指標高端自費診所，客單價高"},
-      {"id":"xz_33","district":"新莊區","clientType":"prospect","name":"風華美學診所（新莊院）","address":"新北市新莊區中華路一段45號","lat":25.0381,"lng":121.4542,"status":"red","equipment":"評估中","notes":"中華路林蔭道旁，主打臉部微整雕塑與緊膚光療"},
-      {"id":"xz_34","district":"新莊區","clientType":"prospect","name":"博愛皮膚科診所","address":"新北市新莊區四維路122號","lat":25.0185,"lng":121.4215,"status":"red","equipment":"評估中","notes":"四維市場商圈，門診量體龐大，入門光電客群穩"},
-      {"id":"xz_35","district":"新莊區","clientType":"prospect","name":"樂美美學診所","address":"新北市新莊區民安東路86號","lat":25.0212,"lng":121.4285,"status":"red","equipment":"評估中","notes":"民安東路生活圈，主打光電保養、皮秒與局部填充"},
-
-      // 中和區 (24)
-      {"id":"zh_01","district":"中和區","clientType":"prospect","name":"雙和醫院附設美容醫學中心","address":"新北市中和區中正路291號","lat":24.9918,"lng":121.4935,"status":"red","equipment":"評估中","notes":"醫學中心級美容中心，醫師量體大，原廠設備耗材規範極高"},
-      {"id":"zh_02","district":"中和區","clientType":"prospect","name":"聖仁皮膚科診所 (中和分院)","address":"新北市中和區興南路一段81號","lat":24.9875,"lng":121.5065,"status":"red","equipment":"評估中","notes":"南勢角核心老字號專科大院，門診量龐大，自費轉化深"},
-      {"id":"zh_03","district":"中和區","clientType":"prospect","name":"依美琦時尚診所 (中和分院)","address":"新北市中和區景安路166號2樓","lat":24.9942,"lng":121.5048,"status":"red","equipment":"評估中","notes":"景安站旁知名連鎖體系，主攻音波拉提與輪廓微整注射"},
-      {"id":"zh_04","district":"中和區","clientType":"prospect","name":"星和診所 (中和環球)","address":"新北市中和區中山路三段122號4樓","lat":25.0065,"lng":121.4752,"status":"red","equipment":"評估中","notes":"環球購物中心核心櫃位，家庭客與年輕白領高頻光電"},
-      {"id":"zh_05","district":"中和區","clientType":"prospect","name":"康捷美學診所","address":"新北市中和區中和路378巷3號","lat":25.0028,"lng":121.5115,"status":"red","equipment":"評估中","notes":"四號公園旁高質感微整光療院所，客單價高"},
-      {"id":"zh_06","district":"中和區","clientType":"prospect","name":"德美皮膚專科診所","address":"新北市中和區中和路74號","lat":24.9998,"lng":121.4985,"status":"red","equipment":"評估中","notes":"廟口生活圈指標專科，健保帶動高比例果酸換膚與雷射自費"},
-      {"id":"zh_07","district":"中和區","clientType":"prospect","name":"佳立美學診所","address":"新北市中和區景平路317號","lat":24.9935,"lng":121.5098,"status":"red","equipment":"評估中","notes":"環狀線旁，主打皮秒雷射、除斑與輪廓微整注射"},
-      {"id":"zh_08","district":"中和區","clientType":"prospect","name":"雅丰美膚診所 (中和分院)","address":"新北市中和區景平路497號","lat":24.9962,"lng":121.5032,"status":"red","equipment":"評估中","notes":"雅丰體系分院，抗老拉提、電音波與微整針劑大戶"},
-      {"id":"zh_09","district":"中和區","clientType":"prospect","name":"林俊銘皮膚科診所","address":"新北市中和區信義街26號","lat":24.9868,"lng":121.5075,"status":"red","equipment":"評估中","notes":"興南夜市生活圈老牌專科，青春痘照光與局部微整"},
-      {"id":"zh_10","district":"中和區","clientType":"prospect","name":"禾雅美學診所","address":"新北市中和區員山路152號","lat":25.0045,"lng":121.4878,"status":"red","equipment":"評估中","notes":"員山路生活圈，主打光電保養、皮秒與局部填充"},
-      {"id":"zh_11","district":"中和區","clientType":"prospect","name":"欣美皮膚科診所","address":"新北市中和區華新街88號","lat":24.9842,"lng":121.5125,"status":"red","equipment":"評估中","notes":"南勢角外圍專科，自費除斑、雷射光療客底穩定"},
-      {"id":"zh_12","district":"中和區","clientType":"prospect","name":"員山皮膚科診所","address":"新北市中和區員山路214號","lat":25.0035,"lng":121.4862,"status":"red","equipment":"評估中","notes":"積穗生活圈指標老牌專科，門診量大，入門光電需求穩"},
-      {"id":"zh_13","district":"中和區","clientType":"prospect","name":"敦仁皮膚科診所","address":"新北市中和區景平路634號","lat":24.9985,"lng":121.5015,"status":"red","equipment":"評估中","notes":"捷運中和站周邊，自費微整、雷射除斑與抗老化療程"},
-      {"id":"zh_14","district":"中和區","clientType":"prospect","name":"晶漾時尚醫美診所 (中和院)","address":"新北市中和區中和路400巷12弄1號","lat":25.0018,"lng":121.5108,"status":"red","equipment":"評估中","notes":"捷運旁自費微整大院，手術、音波與微整雙軌營運"},
-      {"id":"zh_15","district":"中和區","clientType":"prospect","name":"安麗整形外科診所","address":"新北市中和區明緯街10號","lat":24.9932,"lng":121.5062,"status":"red","equipment":"評估中","notes":"景安生活圈老牌手術診所，兼營電音波拉提與微整"},
-      {"id":"zh_16","district":"中和區","clientType":"prospect","name":"嘉仕美美學診所 (中和分部)","address":"新北市中和區建一路166號","lat":25.0058,"lng":121.4895,"status":"red","equipment":"評估中","notes":"遠東科技園區白領客群，主推非侵入緊膚與午休光電"},
-      {"id":"zh_17","district":"中和區","clientType":"prospect","name":"臻品美學診所","address":"新北市中和區中山路二段296號2樓","lat":25.0042,"lng":121.4988,"status":"red","equipment":"評估中","notes":"鄰近大潤發/Costco商圈，自費微整與電音波拉皮主力"},
-      {"id":"zh_18","district":"中和區","clientType":"prospect","name":"新生皮膚科診所","address":"新北市中和區宜安路118號","lat":25.0012,"lng":121.5135,"status":"red","equipment":"評估中","notes":"宜安路生活圈專科，健保帶自費微整與除斑換膚"},
-      {"id":"zh_19","district":"中和區","clientType":"prospect","name":"光合美學診所","address":"新北市中和區中和路350巷8弄2號","lat":25.0031,"lng":121.5122,"status":"red","equipment":"評估中","notes":"公園生活圈高質感醫美，主打高階拉提與私密光電"},
-      {"id":"zh_20","district":"中和區","clientType":"prospect","name":"麗池美學診所","address":"新北市中和區景安路202號","lat":24.9928,"lng":121.5038,"status":"red","equipment":"評估中","notes":"景安站旁社區型醫美，主推入門皮秒與音波體驗"},
-      {"id":"zh_21","district":"中和區","clientType":"prospect","name":"佑康皮膚科診所","address":"新北市中和區和平街32號","lat":24.9882,"lng":121.5052,"status":"red","equipment":"評估中","notes":"捷運共構商圈，健保搭配局部除斑光療與果酸換膚"},
-      {"id":"zh_22","district":"中和區","clientType":"prospect","name":"博仁皮膚科診所","address":"新北市中和區連城路89號","lat":24.9982,"lng":121.4975,"status":"red","equipment":"評估中","notes":"連城路老牌專科，具穩定自費除斑保養客群"},
-      {"id":"zh_23","district":"中和區","clientType":"prospect","name":"研美學診所 (中和院)","address":"新北市中和區連城路268號","lat":24.9965,"lng":121.4912,"status":"red","equipment":"評估中","notes":"園區核心，專攻高階光電抗老與玻尿酸填充"},
-      {"id":"zh_24","district":"中和區","clientType":"prospect","name":"晶緻美學診所 (中和分院)","address":"新北市中和區中和路366號3樓","lat":25.0025,"lng":121.5118,"status":"red","equipment":"評估中","notes":"四號公園旁預約制院所，熟客抗老拉提與肉毒微整"},
-
-      // 永和區 (21)
-      {"id":"yh_01","district":"永和區","clientType":"prospect","name":"謝政璋皮膚科診所","address":"新北市永和區福和路103號","lat":25.0102,"lng":121.5175,"status":"red","equipment":"評估中","notes":"新北門診量霸主級專科大院，自費雷射與保養需求極深"},
-      {"id":"yh_02","district":"永和區","clientType":"prospect","name":"鍾婦產科附設醫美部","address":"新北市永和區文化路5號","lat":25.0142,"lng":121.5152,"status":"red","equipment":"評估中","notes":"頂溪捷運站旁名院，專攻女性抗老、私密光電與微整"},
-      {"id":"yh_03","district":"永和區","clientType":"prospect","name":"齊美皮膚科診所","address":"新北市永和區中和路501巷3號","lat":25.0042,"lng":121.5122,"status":"red","equipment":"評估中","notes":"永安市場站後方，自費痘疤光電與皮秒主力院所"},
-      {"id":"yh_04","district":"永和區","clientType":"prospect","name":"悠美診所 (永和分院)","address":"新北市永和區永和路二段228號3樓","lat":25.0155,"lng":121.5165,"status":"red","equipment":"評估中","notes":"頂溪站口高階連鎖，主攻原廠高階光電與電音波"},
-      {"id":"yh_05","district":"永和區","clientType":"prospect","name":"愛爾麗診所 (永和分院)","address":"新北市永和區永和路二段100號2樓","lat":25.0135,"lng":121.5162,"status":"red","equipment":"評估中","notes":"頂溪核心商圈指標連鎖，音波拉提與針劑微整量大"},
-      {"id":"yh_06","district":"永和區","clientType":"prospect","name":"御美妍診所 (永和院)","address":"新北市永和區永和路二段57號2樓","lat":25.0125,"lng":121.5158,"status":"red","equipment":"評估中","notes":"連鎖微整光療院所，客群偏好性價比與入門抗老"},
-      {"id":"yh_07","district":"永和區","clientType":"prospect","name":"欣漾自然美學診所","address":"新北市永和區中山路一段96號","lat":25.0115,"lng":121.5112,"status":"red","equipment":"評估中","notes":"樂華夜市口，主打非侵入緊膚拉提與自然微整"},
-      {"id":"yh_08","district":"永和區","clientType":"prospect","name":"佳醫美人診所 (永和分院)","address":"新北市永和區永和路一段186號2樓","lat":25.0085,"lng":121.5148,"status":"red","equipment":"評估中","notes":"佳醫體系高規格院所，以原廠光電與注射線雕為主"},
-      {"id":"yh_09","district":"永和區","clientType":"prospect","name":"永和光澤診所","address":"新北市永和區永和路二段168號3樓","lat":25.0145,"lng":121.5165,"status":"red","equipment":"評估中","notes":"光澤體系永和重鎮，自費微整注射與音波量體大"},
-      {"id":"yh_10","district":"永和區","clientType":"prospect","name":"美加醫美診所 (永和院)","address":"新北市永和區自由街55號","lat":25.0068,"lng":121.5162,"status":"red","equipment":"評估中","notes":"自由街生活圈，主推電音波拉皮與日常微整保養"},
-      {"id":"yh_11","district":"永和區","clientType":"prospect","name":"柯適中皮膚科診所","address":"新北市永和區竹林路115號","lat":25.0118,"lng":121.5205,"status":"red","equipment":"評估中","notes":"網溪國小旁老牌專科，在地自費除斑保養口碑極佳"},
-      {"id":"yh_12","district":"永和區","clientType":"prospect","name":"頂溪皮膚科診所","address":"新北市永和區永和路二段185號","lat":25.0148,"lng":121.5158,"status":"red","equipment":"評估中","notes":"頂溪站對面，門診人流大，自費雷射與保養轉化穩"},
-      {"id":"yh_13","district":"永和區","clientType":"prospect","name":"恩緹時尚醫美診所 (永和院)","address":"新北市永和區永和路二段116號3樓","lat":25.0138,"lng":121.5165,"status":"red","equipment":"評估中","notes":"捷運站旁，主打年輕族群入門音波、皮秒與微整填充"},
-      {"id":"yh_14","district":"永和區","clientType":"prospect","name":"臻美美學診所 (永和分院)","address":"新北市永和區中和路421巷6號","lat":25.0038,"lng":121.5115,"status":"red","equipment":"評估中","notes":"永安市場旁靜巷院所，客群偏好客製化抗老拉提"},
-      {"id":"yh_15","district":"永和區","clientType":"prospect","name":"仁愛皮膚科診所 (永和)","address":"新北市永和區仁愛路269號","lat":25.0122,"lng":121.5075,"status":"red","equipment":"評估中","notes":"仁愛公園豪宅生活圈，住戶偏好高單價非侵入拉提"},
-      {"id":"yh_16","district":"永和區","clientType":"prospect","name":"雅緹皮膚專科診所","address":"新北市永和區得和路243號","lat":25.0028,"lng":121.5215,"status":"red","equipment":"評估中","notes":"秀朗國小生活圈核心專科，健保帶自費雷射光療"},
-      {"id":"yh_17","district":"永和區","clientType":"prospect","name":"綺麗醫美診所","address":"新北市永和區光復街36號","lat":25.0152,"lng":121.5135,"status":"red","equipment":"評估中","notes":"頂溪周邊自費診所，主攻微整針劑、埋線與局部體雕"},
-      {"id":"yh_18","district":"永和區","clientType":"prospect","name":"晶漾美學診所 (永和院)","address":"新北市永平路82號2樓","lat":25.0128,"lng":121.5105,"status":"red","equipment":"評估中","notes":"樂華夜市旁，主推微整注射、除斑與緊緻光療"},
-      {"id":"yh_19","district":"永和區","clientType":"prospect","name":"敦美皮膚科診所","address":"新北市永和區永貞路345號","lat":25.0072,"lng":121.5108,"status":"red","equipment":"評估中","notes":"永貞路餐飲熱區，白領下班保養與雷射除毛量穩"},
-      {"id":"yh_20","district":"永和區","clientType":"prospect","name":"宏林皮膚科診所","address":"新北市永和區得和路385號","lat":25.0015,"lng":121.5242,"status":"red","equipment":"評估中","notes":"靠近福和國中，老字號專科，自費果酸換膚與雷射量定"},
-      {"id":"yh_21","district":"永和區","clientType":"prospect","name":"欣美診所 (醫美部)","address":"新北市永和區竹林路68號2樓","lat":25.0132,"lng":121.5192,"status":"red","equipment":"評估中","notes":"鄰近永和區公所，公教人員客群偏好穩定溫和抗老光療"},
-
-      // 三重區 (23)
-      {"id":"sc_01","district":"三重區","clientType":"prospect","name":"淨妍醫美診所 (三重分院)","address":"新北市三重區正義北路104號2樓","lat":25.0665,"lng":121.4982,"status":"red","equipment":"評估中","notes":"正義北路一級戰區，音波與針劑翻桌率極高"},
-      {"id":"sc_02","district":"三重區","clientType":"prospect","name":"美麗爾診所 (三重分院)","address":"新北市三重區正義北路199號","lat":25.0705,"lng":121.4975,"status":"red","equipment":"評估中","notes":"陳美齡醫師體系，光電微整與抗老主力大戶"},
-      {"id":"sc_03","district":"三重區","clientType":"prospect","name":"聖仁皮膚科診所 (三重總院)","address":"新北市三重區正義北路128號","lat":25.0678,"lng":121.4980,"status":"red","equipment":"評估中","notes":"三重最具指標老牌皮膚科大院，人流極大，自費轉化深"},
-      {"id":"sc_04","district":"三重區","clientType":"prospect","name":"江幸蓉皮膚科診所","address":"新北市三重區重新路二段18號","lat":25.0632,"lng":121.5005,"status":"red","equipment":"評估中","notes":"台北橋捷運站旁老牌專科，痘疤雷射與除斑口碑佳"},
-      {"id":"sc_05","district":"三重區","clientType":"prospect","name":"愛爾麗診所 (三重分院)","address":"新北市三重區重新路二段34號2樓","lat":25.0635,"lng":121.4998,"status":"red","equipment":"評估中","notes":"重新路捷運大道核心，非侵入光電與微整耗材量體龐大"},
-      {"id":"sc_06","district":"三重區","clientType":"prospect","name":"仁愛皮膚科診所","address":"新北市三重區正義南路28號","lat":25.0612,"lng":121.4995,"status":"red","equipment":"評估中","notes":"天台生活圈老字號專科，健保帶自費微整與基礎光療"},
-      {"id":"sc_07","district":"三重區","clientType":"prospect","name":"晶漾時尚醫美診所 (三重院)","address":"新北市三重區重新路二段68號","lat":25.0638,"lng":121.4978,"status":"red","equipment":"評估中","notes":"手術與自費光電雙軌，客群黏著度高"},
-      {"id":"sc_08","district":"三重區","clientType":"prospect","name":"杏立皮膚科診所","address":"新北市三重區重新路三段112號","lat":25.0625,"lng":121.4925,"status":"red","equipment":"評估中","notes":"菜寮捷運站旁，主打斑點痘疤與雷射複合式保養"},
-      {"id":"sc_09","district":"三重區","clientType":"prospect","name":"恩緹時尚醫美診所 (三重院)","address":"新北市三重區中央南路2號2樓","lat":25.0628,"lng":121.5012,"status":"red","equipment":"評估中","notes":"三和夜市與台北橋交會口，年輕客群除斑與入門音波"},
-      {"id":"sc_10","district":"三重區","clientType":"prospect","name":"芯漾美學診所","address":"新北市三重區三和路四段165號","lat":25.0755,"lng":121.4885,"status":"red","equipment":"評估中","notes":"三和路生活圈新興診所，設備評估與換代意願高"},
-      {"id":"sc_11","district":"新北聯合醫院附設醫美中心","address":"新北市三重區新北大道一段3號","lat":25.0618,"lng":121.4932,"status":"red","equipment":"評估中","notes":"公立區域教學醫院醫美中心，設備引進招標制度健全"},
-      {"id":"sc_12","district":"三重區","clientType":"prospect","name":"采醫雅典診所","address":"新北市三重區重新路一段118號","lat":25.0635,"lng":121.5032,"status":"red","equipment":"評估中","notes":"台北橋出口連鎖院所，主攻微整針劑與入門光電"},
-      {"id":"sc_13","district":"三重區","clientType":"prospect","name":"晶緻美學診所 (三重院)","address":"新北市三重區重新路二段78號3樓","lat":25.0641,"lng":121.4965,"status":"red","equipment":"評估中","notes":"重新路商業大樓內，熟客預約制，電音波拉提與肉毒注射"},
-      {"id":"sc_14","district":"三重區","clientType":"prospect","name":"大同皮膚科診所","address":"新北市三重區大同北路22號","lat":25.0648,"lng":121.4972,"status":"red","equipment":"評估中","notes":"大同市場周邊專科，自費換膚、除斑與基礎光療量穩"},
-      {"id":"sc_15","district":"三重區","clientType":"prospect","name":"祐民皮膚科診所","address":"新北市三重區重新路三段28號","lat":25.0628,"lng":121.4952,"status":"red","equipment":"評估中","notes":"菜寮核心專科，醫師親和力強，自費微整接受度高"},
-      {"id":"sc_16","district":"三重區","clientType":"prospect","name":"佳美皮膚科診所","address":"新北市三重區集美街168號","lat":25.0585,"lng":121.4922,"status":"red","equipment":"評估中","notes":"集美學區生活圈，高質感住戶群，偏好溫和拉提與保濕雷射"},
-      {"id":"sc_17","district":"三重區","clientType":"prospect","name":"三和皮膚科診所","address":"新北市三重區三和路三段42號","lat":25.0712,"lng":121.4935,"status":"red","equipment":"評估中","notes":"捷運站旁老牌專科，青春痘照光與除斑雷射主力"},
-      {"id":"sc_18","district":"三重區","clientType":"prospect","name":"采緹美學診所","address":"新北市三重區正義北路328號","lat":25.0745,"lng":121.4962,"status":"red","equipment":"評估中","notes":"正義北路後段新興醫美，主打皮秒雷射與玻尿酸填充"},
-      {"id":"sc_19","district":"三重區","clientType":"prospect","name":"光彩美學診所 (三重院)","address":"新北市三重區重新路四段12號","lat":25.0608,"lng":121.4905,"status":"red","equipment":"評估中","notes":"近集美生活圈，非侵入式緊緻拉提與美體雕塑"},
-      {"id":"sc_20","district":"三重區","clientType":"prospect","name":"雅美姬時尚診所 (三重院)","address":"新北市三重區正義北路218號2樓","lat":25.0715,"lng":121.4968,"status":"red","equipment":"評估中","notes":"連鎖微整光療院所，客群注重性價比與抗老微整"},
-      {"id":"sc_21","district":"三重區","clientType":"prospect","name":"健新皮膚科診所","address":"新北市三重區五華街87號","lat":25.0825,"lng":121.4915,"status":"red","equipment":"評估中","notes":"重陽重劃區/五華街商圈，新興家庭客，主推皮秒與音波"},
-      {"id":"sc_22","district":"三重區","clientType":"prospect","name":"重陽美學診所","address":"新北市三重區集智街56號","lat":25.0858,"lng":121.4942,"status":"red","equipment":"評估中","notes":"重劃區豪宅聚落，住戶客單價高，偏好高階原廠光電"},
-      {"id":"sc_23","district":"三重區","clientType":"prospect","name":"尚水美博診所 (三重院)","address":"新北市三重區重新路一段88號2樓","lat":25.0632,"lng":121.5022,"status":"red","equipment":"評估中","notes":"近捷運站，主攻微整光電、線雕與眼部手術複合療程"},
-
-      // 林口區 (17)
-      {"id":"lk_01","district":"林口區","clientType":"prospect","name":"林口長庚醫院附設醫學美容中心","address":"新北市林口區文化一路一段123號","lat":25.0615,"lng":121.3685,"status":"red","equipment":"評估中","notes":"頂級醫學中心美容醫學重鎮，醫師量體龐大，規格指標"},
-      {"id":"lk_02","district":"林口區","clientType":"prospect","name":"星和診所 (林口分院)","address":"新北市林口區文化三路一段390號2樓","lat":25.0725,"lng":121.3678,"status":"red","equipment":"評估中","notes":"A9站旁，林口高資產年輕住戶光電微整主力院所"},
-      {"id":"lk_03","district":"林口區","clientType":"prospect","name":"美爾萃診所","address":"新北市林口區文化二路一段390號","lat":25.0735,"lng":121.3712,"status":"red","equipment":"評估中","notes":"扶輪公園首排豪宅區高質感醫美，主攻高端拉提與私密光電"},
-      {"id":"lk_04","district":"林口區","clientType":"prospect","name":"晶美美學診所 (林口院)","address":"新北市林口區文化二路一段266號","lat":25.0705,"lng":121.3725,"status":"red","equipment":"評估中","notes":"三井 Outlet 旁熱點，手術、微整與光電拉提兼具"},
-      {"id":"lk_05","district":"林口區","clientType":"prospect","name":"何秋燕皮膚科診所","address":"新北市林口區文化二路二段58號","lat":25.0815,"lng":121.3765,"status":"red","equipment":"評估中","notes":"家樂福生活圈指標專科，自費微整與除斑口碑佳"},
-      {"id":"lk_06","district":"林口區","clientType":"prospect","name":"童話皮膚專科診所 (林口分院)","address":"新北市林口區文化三路一段467號","lat":25.0758,"lng":121.3695,"status":"red","equipment":"評估中","notes":"昕境廣場旁專科，原廠高階光電與自費微整大戶"},
-      {"id":"lk_07","district":"林口區","clientType":"prospect","name":"研之美美學診所","address":"新北市林口區文化二路一段559號","lat":25.0782,"lng":121.3745,"status":"red","equipment":"評估中","notes":"豪宅聚落自費診所，客單價高，偏好非侵入設備"},
-      {"id":"lk_08","district":"林口區","clientType":"prospect","name":"雅美姬時尚診所 (林口院)","address":"新北市林口區文化三路一段249巷40號","lat":25.0685,"lng":121.3665,"status":"red","equipment":"評估中","notes":"三井生活圈，白領與家庭客群抗老拉提主力"},
-      {"id":"lk_09","district":"林口區","clientType":"prospect","name":"維格皮膚科診所 (林口院)","address":"新北市林口區文化三路一段191巷26號","lat":25.0672,"lng":121.3658,"status":"red","equipment":"評估中","notes":"維格體系林口旗艦點，原廠光電與微整針劑量大"},
-      {"id":"lk_10","district":"林口區","clientType":"prospect","name":"晴美皮膚專科診所","address":"新北市林口區文化三路一段561號","lat":25.0792,"lng":121.3718,"status":"red","equipment":"評估中","notes":"專科醫師陣容完整，設備引送意願與升級評估度高"},
-      {"id":"lk_11","district":"林口區","clientType":"prospect","name":"欣悅皮膚科診所","address":"新北市林口區仁愛路二段228號","lat":25.0765,"lng":121.3822,"status":"red","equipment":"評估中","notes":"舊市區與重劃區交界，在地家庭客群，自費除斑保養穩定"},
-      {"id":"lk_12","district":"林口區","clientType":"prospect","name":"琢美美學診所","address":"新北市林口區文化三路一段402巷18號","lat":25.0742,"lng":121.3682,"status":"red","equipment":"評估中","notes":"昕境國賓影城周邊，主打原廠皮秒、電音波拉皮與肉毒微整"},
-      {"id":"lk_13","district":"林口區","clientType":"prospect","name":"鉑金美學診所","address":"新北市林口區八德路32號","lat":25.0658,"lng":121.3645,"status":"red","equipment":"評估中","notes":"捷運站正對面豪宅區，客單價極高，偏好高階緊膚拉提"},
-      {"id":"lk_14","district":"林口區","clientType":"prospect","name":"璞之妍美學診所 (林口院)","address":"新北市林口區文化二路一段372號2樓","lat":25.0728,"lng":121.3708,"status":"red","equipment":"評估中","notes":"頂級非侵入光電體系，主攻原廠高階電波、音波與皮秒"},
-      {"id":"lk_15","district":"林口區","clientType":"prospect","name":"林口麗姿診所","address":"新北市林口區文化二路二段128號","lat":25.0832,"lng":121.3782,"status":"red","equipment":"評估中","notes":"家樂福商圈核心，主打微整填充、埋線與私密光電"},
-      {"id":"lk_16","district":"林口區","clientType":"prospect","name":"采林皮膚專科診所","address":"新北市林口區民族路33號","lat":25.0695,"lng":121.3638,"status":"red","equipment":"評估中","notes":"鄰近三井Outlet，醫師專業度高，自費雷射轉化率穩"},
-      {"id":"lk_17","district":"林口區","clientType":"prospect","name":"沐光美學診所","address":"新北市林口區忠孝路388號","lat":25.0718,"lng":121.3692,"status":"red","equipment":"評估中","notes":"忠孝路住宅區高質感醫美，主推複合式雷射光療與日常緊緻"},
-
-      // 基隆市 (12)
-      {"id":"kl_01","district":"基隆市","clientType":"prospect","name":"基隆葛萊美診所","address":"基隆市中正區義一路23號2樓","lat":25.1315,"lng":121.7458,"status":"red","equipment":"評估中","notes":"義一路指標高質感醫美，主攻雷射光療、微整拉提與體雕"},
-      {"id":"kl_02","district":"基隆市","clientType":"prospect","name":"廖國棟皮膚科診所","address":"基隆市中正區義一路66號","lat":25.1332,"lng":121.7465,"status":"red","equipment":"評估中","notes":"在地老牌權威專科，自費雷射除斑、除皺與基礎微整大院"},
-      {"id":"kl_03","district":"基隆市","clientType":"prospect","name":"陳怡穎皮膚科診所","address":"基隆市中正區義二路65-1號","lat":25.1328,"lng":121.7452,"status":"red","equipment":"評估中","notes":"義二路醫療街熱門專科，自費換膚、痘疤光療與微整注射"},
-      {"id":"kl_04","district":"基隆市","clientType":"prospect","name":"欣美診所 (基隆店)","address":"基隆市仁愛區愛五路34號4樓","lat":25.1285,"lng":121.7455,"status":"red","equipment":"評估中","notes":"連鎖體系分院，主打音波/電波拉提、複合式微整注射與原廠光療"},
-      {"id":"kl_05","district":"基隆市","clientType":"prospect","name":"基隆美詩爾診所","address":"基隆市仁愛區愛三路87號2樓","lat":25.1292,"lng":121.7432,"status":"red","equipment":"評估中","notes":"廟口商圈核心，電波/音波拉提、微整注射與皮秒雷射主力大院"},
-      {"id":"kl_06","district":"基隆市","clientType":"prospect","name":"妮可美麗整形外科診所","address":"基隆市仁愛區仁一路257號","lat":25.1298,"lng":121.7468,"status":"red","equipment":"評估中","notes":"在地老字號手術與自費醫美大院，整形手術與非侵入拉提並行"},
-      {"id":"kl_07","district":"基隆市","clientType":"prospect","name":"江文標皮膚科診所","address":"基隆市仁愛區愛三路120號6樓","lat":25.1288,"lng":121.7428,"status":"red","equipment":"評估中","notes":"老牌專科名院，門診量體龐大，具備穩定自費光電客底"},
-      {"id":"kl_08","district":"基隆市","clientType":"prospect","name":"孫皮膚科診所","address":"基隆市仁愛區愛三路120號3樓","lat":25.1288,"lng":121.7428,"status":"red","equipment":"評估中","notes":"在地資深皮膚科，健保帶動基礎光療與局部微整自費"},
-      {"id":"kl_09","district":"基隆市","clientType":"prospect","name":"基隆長庚醫院美容醫學中心","address":"基隆市安樂區麥金路222號6樓","lat":25.1228,"lng":121.7135,"status":"red","equipment":"評估中","notes":"長庚體系區域重鎮，整外與皮膚專科陣容龐大，耗材規格高"},
-      {"id":"kl_10","district":"基隆市","clientType":"prospect","name":"衛生福利部基隆醫院美容中心","address":"基隆市信義區信二路268號","lat":25.1295,"lng":121.7495,"status":"red","equipment":"評估中","notes":"公立醫院美容醫學中心，光電雷射、除毛與微整微雕兼具"},
-      {"id":"kl_11","district":"基隆市","clientType":"prospect","name":"康美診所 (基隆院)","address":"基隆市信義區深溪路139號2樓","lat":25.1282,"lng":121.7765,"status":"red","equipment":"評估中","notes":"新興商圈自費診所，主攻雷射光療、微整注射與美肌抗老保養"},
-      {"id":"kl_12","district":"基隆市","clientType":"prospect","name":"臺灣礦工醫院醫學美容中心","address":"基隆市暖暖區源遠路282號","lat":25.1055,"lng":121.7492,"status":"red","equipment":"評估中","notes":"區域醫院附設自費美容門診，專注音波拉提、肉毒與除斑雷射"}
-    ];
 
     const districtCoords = {
       'ALL': { center: [25.065, 121.555], zoom: 11 },
@@ -526,14 +338,7 @@
 
     clinicsRef.on('value', (snapshot) => {
       const data = snapshot.val();
-      if (!data) {
-        initialVerifiedClinics.forEach(c => clinicsRef.child(c.id).set(c));
-        return;
-      }
-      
-      initialVerifiedClinics.forEach(c => {
-        if (!data[c.id]) clinicsRef.child(c.id).set(c);
-      });
+      if (!data) return;
 
       clinics = Object.values(data).map(item => ({
         ...item,
@@ -617,6 +422,7 @@
 
         const diffDays = Math.round((fDate - today) / (1000 * 60 * 60 * 24));
 
+        // 擴大為 7 天內提醒
         if (diffDays <= 7) {
           pendingItems.push({
             clinic: c,
@@ -663,18 +469,6 @@
         `;
         reminderList.appendChild(div);
       });
-
-      if (Notification.permission === "granted") {
-        const overdueOrToday = pendingItems.filter(p => p.diffDays <= 0);
-        if (overdueOrToday.length > 0) {
-          new Notification("🔔 醫美戰情室：今日拜訪追蹤", {
-            body: `你有 ${overdueOrToday.length} 家診所待複訪或已逾期，點擊進入查看！`,
-            icon: "https://cdn-icons-png.flaticon.com/512/854/854878.png"
-          });
-        }
-      } else if (Notification.permission !== "denied") {
-        Notification.requestPermission();
-      }
     }
 
     window.toggleReminderList = function() {
@@ -755,7 +549,7 @@
             iconSize: [26, 26],
             iconAnchor: [13, 13]
           });
-          marker = L.marker([item.lat, item.lng], { icon: vipIcon }).addTo(map);
+          marker = L.marker([item.lat, item.lng], { icon: vipIcon, draggable: true }).addTo(map);
         } else {
           marker = L.circleMarker([item.lat, item.lng], {
             radius: 10,
@@ -765,6 +559,17 @@
             opacity: 1,
             fillOpacity: 0.95
           }).addTo(map);
+        }
+
+        // 支援拖曳即時校正座標
+        if (marker.on) {
+          marker.on('dragend', function(e) {
+            const newPos = e.target.getLatLng();
+            clinicsRef.child(item.id).update({
+              lat: newPos.lat,
+              lng: newPos.lng
+            });
+          });
         }
 
         const badgeClass = isExisting ? 'badge-existing' : 'badge-prospect';
@@ -982,25 +787,44 @@
       submitBtn.classList.remove('btn-update');
     };
 
-    /* 核心定位函式：三層階梯式降級比對 */
-    async function geocodeAddressWithFallback(rawAddress, detectedDistrict) {
-      // 清洗掉里、村、鄰等干擾字詞
-      let clean = rawAddress.replace(/.{1,3}[里村鄰]/g, '').trim();
-
-      // 第 1 級：清洗後的完整地址
-      let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(clean)}`);
-      let data = await res.json();
-      if (data && data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-
-      // 第 2 級：刪除門牌號碼與樓層，只保留到 路/街/巷/段
-      let streetOnly = clean.replace(/\d+.*[號樓fF-].*/g, '').trim();
-      if (streetOnly && streetOnly !== clean) {
-        res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(streetOnly)}`);
-        data = await res.json();
-        if (data && data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    /* 真正智慧的後台定位器：
+       第0步：自動用【行政區 + 店名】去圖資搜（若地圖上早已存在該診所標記，100% 屋頂命中）
+       第1步：用完整門牌地址搜
+       第2步：降級用路段搜
+       第3步：行政區兜底
+    */
+    async function smartGeocode(name, rawAddress, detectedDistrict) {
+      // 第 0 級：店名命中（最神準）
+      if (name) {
+        const queryName = `${detectedDistrict !== '其他' ? detectedDistrict : ''} ${name}`.trim();
+        try {
+          let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryName)}`);
+          let data = await res.json();
+          if (data && data.length > 0) {
+            return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+          }
+        } catch(e) {}
       }
 
-      // 第 3 級：若仍找不到，降級至該行政區中心
+      // 第 1 級：清洗後的完整門牌
+      let clean = rawAddress.replace(/.{1,3}[里村鄰]/g, '').trim();
+      try {
+        let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(clean)}`);
+        let data = await res.json();
+        if (data && data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+      } catch(e) {}
+
+      // 第 2 級：刪除號碼樓層，退至路段
+      let streetOnly = clean.replace(/\d+.*[號樓fF-].*/g, '').trim();
+      if (streetOnly && streetOnly !== clean) {
+        try {
+          let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(streetOnly)}`);
+          let data = await res.json();
+          if (data && data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+        } catch(e) {}
+      }
+
+      // 第 3 級：行政區中心
       if (districtCoords[detectedDistrict]) {
         return {
           lat: districtCoords[detectedDistrict].center[0],
@@ -1048,10 +872,10 @@
       }
 
       submitBtn.disabled = true;
-      submitBtn.innerText = '正在定位並儲存雲端...';
+      submitBtn.innerText = '正在智慧精準定位中...';
 
       try {
-        const coords = await geocodeAddressWithFallback(address, detectedDistrict);
+        const coords = await smartGeocode(name, address, detectedDistrict);
 
         if (coords) {
           const newId = 'c_' + Date.now();
@@ -1060,7 +884,7 @@
             clientType: clientType,
             district: detectedDistrict,
             name: name,
-            address: address, // 完整門牌保留於資料庫
+            address: address,
             lat: coords.lat,
             lng: coords.lng,
             status: clientType === 'existing' ? 'purple' : document.getElementById('status').value,
