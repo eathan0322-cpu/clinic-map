@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>新北基醫美戰情室 - 雙軌業務與即時搜尋版</title>
+  <title>雙北基醫美戰情室 - 雙軌業務與即時搜尋版</title>
   
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -139,6 +139,13 @@
             <option value="三重區">三重區</option>
             <option value="林口區">林口區</option>
             <option value="基隆市">基隆市</option>
+            <option value="信義區">信義區 (台北)</option>
+            <option value="大安區">大安區 (台北)</option>
+            <option value="中山區">中山區 (台北)</option>
+            <option value="中正區">中正區 (台北)</option>
+            <option value="內湖區">內湖區 (台北)</option>
+            <option value="南港區">南港區 (台北)</option>
+            <option value="松山區">松山區 (台北)</option>
             <option value="蘆洲區">蘆洲區</option>
             <option value="土城區">土城區</option>
             <option value="新店區">新店區</option>
@@ -213,11 +220,11 @@
 
       <div class="form-group">
         <label>診所名稱</label>
-        <input type="text" id="name" placeholder="例如：姩美肌膚診所" required>
+        <input type="text" id="name" placeholder="例如：泰可國際 或 康博診所" required>
       </div>
       <div class="form-group">
         <label>診所地址</label>
-        <input type="text" id="address" placeholder="例如：新北市三重區重陽路三段5巷28號" required>
+        <input type="text" id="address" placeholder="例如：台北市信義區東興路41號" required>
       </div>
 
       <div class="form-group" id="statusFormGroup">
@@ -233,7 +240,7 @@
 
       <div class="form-group">
         <label>現有機台 / 競品與耗材需求</label>
-        <input type="text" id="equipment" placeholder="例如：雙倍提、Z音波、探頭耗材量大">
+        <input type="text" id="equipment" placeholder="例如：Linear Z、CoreSculpt、探頭需求">
       </div>
 
       <div class="form-group">
@@ -249,7 +256,7 @@
 
       <div class="form-group">
         <label>戰情情報與下一步策略</label>
-        <textarea id="notes" rows="3" placeholder="例如：安排Z音波&脈衝光 Demo"></textarea>
+        <textarea id="notes" rows="3" placeholder="例如：總部例行會議、展示機台安排"></textarea>
       </div>
       <button type="submit" id="submitBtn" class="btn-primary">定位並同步至雲端</button>
     </form>
@@ -293,6 +300,13 @@
       '三重區': { center: [25.0685, 121.4885], zoom: 14 },
       '林口區': { center: [25.0785, 121.3715], zoom: 14 },
       '基隆市': { center: [25.1315, 121.7435], zoom: 14 },
+      '信義區': { center: [25.0335, 121.5685], zoom: 14 },
+      '大安區': { center: [25.0265, 121.5435], zoom: 14 },
+      '中山區': { center: [25.0625, 121.5335], zoom: 14 },
+      '中正區': { center: [25.0325, 121.5185], zoom: 14 },
+      '內湖區': { center: [25.0835, 121.5945], zoom: 13 },
+      '南港區': { center: [25.0555, 121.6065], zoom: 14 },
+      '松山區': { center: [25.0595, 121.5585], zoom: 14 },
       '蘆洲區': { center: [25.0855, 121.4725], zoom: 14 },
       '土城區': { center: [24.9725, 121.4435], zoom: 14 },
       '新店區': { center: [24.9685, 121.5415], zoom: 13 },
@@ -354,7 +368,10 @@
 
     function detectDistrict(addr) {
       if (addr.includes('基隆')) return '基隆市';
-      const districts = ['板橋區', '新莊區', '中和區', '永和區', '三重區', '林口區', '蘆洲區', '土城區', '新店區', '淡水區', '汐止區', '三峽區', '鶯歌區', '樹林區', '泰山區', '五股區', '八里區'];
+      const districts = [
+        '板橋區', '新莊區', '中和區', '永和區', '三重區', '林口區', '蘆洲區', '土城區', '新店區', '淡水區', '汐止區', '三峽區', '鶯歌區', '樹林區', '泰山區', '五股區', '八里區',
+        '信義區', '大安區', '中山區', '中正區', '內湖區', '南港區', '松山區', '士林區', '北投區', '萬華區', '文山區', '大同區'
+      ];
       for (let d of districts) {
         if (addr.includes(d) || addr.includes(d.replace('區', ''))) return d;
       }
@@ -550,7 +567,6 @@
           });
           marker = L.marker([item.lat, item.lng], { icon: vipIcon, draggable: true }).addTo(map);
         } else {
-          // 陌開客戶也改用 divIcon 支援拖曳校正
           const pIcon = L.divIcon({
             className: 'prospect-marker-wrap',
             html: `
@@ -569,7 +585,6 @@
           marker = L.marker([item.lat, item.lng], { icon: pIcon, draggable: true }).addTo(map);
         }
 
-        // 核心功能：全標記拖曳放開自動儲存新座標至 Firebase
         marker.on('dragend', function(e) {
           const newPos = e.target.getLatLng();
           clinicsRef.child(item.id).update({
@@ -793,41 +808,43 @@
       submitBtn.classList.remove('btn-update');
     };
 
-    /* 真正強大的在地多階精準搜尋器 */
+    /* 台灣限定多階精準搜尋器 (嚴格鎖死 countrycodes=tw，絕不飄到國外) */
     async function smartGeocode(name, rawAddress, detectedDistrict) {
-      // 1. 先把地址字串徹底淨化（去掉里村鄰、去掉樓層）
-      let clean = rawAddress.replace(/.{1,3}[里村鄰]/g, '').trim();
-      let pureStreetNumber = clean.replace(/\d+[樓fF-].*/g, '').trim(); // 去除 1樓、2F
+      const twLock = '&countrycodes=tw';
 
-      // 優先序 A：用【店名 + 行政區】查（若店家地標已有，100% 屋頂命中）
+      // 1. 純淨門牌清洗
+      let clean = rawAddress.replace(/.{1,3}[里村鄰]/g, '').trim();
+      let pureStreetNumber = clean.replace(/\d+[樓fF-].*/g, '').trim();
+
+      // 優先序 A：純淨門牌查詢 (最標準精確)
+      try {
+        let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(pureStreetNumber)}${twLock}`);
+        let data = await res.json();
+        if (data && data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+      } catch(e) {}
+
+      // 優先序 B：店名 + 行政區查詢 (鎖死台灣)
       if (name) {
         const queryName = `${detectedDistrict !== '其他' ? detectedDistrict : ''} ${name}`.trim();
         try {
-          let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryName)}`);
+          let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryName)}${twLock}`);
           let data = await res.json();
           if (data && data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
         } catch(e) {}
       }
 
-      // 優先序 B：去樓層後的純淨門牌（如：新北市三重區重陽路三段5巷28號）
-      try {
-        let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(pureStreetNumber)}`);
-        let data = await res.json();
-        if (data && data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-      } catch(e) {}
-
       // 優先序 C：原始清洗地址
       try {
-        let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(clean)}`);
+        let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(clean)}${twLock}`);
         let data = await res.json();
         if (data && data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
       } catch(e) {}
 
-      // 優先序 D：降級退到路段/巷段
+      // 優先序 D：降級退到路段/巷段 (鎖死台灣)
       let streetOnly = pureStreetNumber.replace(/\d+.*[號].*/g, '').trim();
       if (streetOnly && streetOnly !== pureStreetNumber) {
         try {
-          let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(streetOnly)}`);
+          let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(streetOnly)}${twLock}`);
           let data = await res.json();
           if (data && data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
         } catch(e) {}
@@ -881,7 +898,7 @@
       }
 
       submitBtn.disabled = true;
-      submitBtn.innerText = '正在智慧精準定位中...';
+      submitBtn.innerText = '正在台灣境內精準定位中...';
 
       try {
         const coords = await smartGeocode(name, address, detectedDistrict);
@@ -913,7 +930,7 @@
           map.setView([coords.lat, coords.lng], 16);
           e.target.reset();
         } else {
-          alert('找不到這個地址，請確認有填寫行政區與正確路名！');
+          alert('找不到這個地址，請確認有填寫正確的台灣縣市行政區與路名！');
         }
       } catch (err) {
         alert('連線失敗，請檢查網路連線。');
