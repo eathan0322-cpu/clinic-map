@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>雙北基醫美戰情室 - 雙軌業務與即時搜尋版</title>
+  <title>新北北基醫美戰情室 - 雙軌業務與即時搜尋版</title>
   
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
@@ -26,11 +26,11 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
     body { display: flex; height: 100vh; overflow: hidden; background: #0f172a; color: #f8fafc; }
-    #sidebar { width: 420px; height: 100%; overflow-y: auto; background: #1e293b; padding: 18px; box-shadow: 2px 0 10px rgba(0,0,0,0.5); z-index: 1000; flex-shrink: 0; transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+    #sidebar { width: 420px; height: 100%; overflow-y: auto; background: #1e293b; padding: 18px; box-shadow: 2px 0 10px rgba(0,0,0,0.5); z-index: 1000; flex-shrink: 0; }
     #map { flex: 1; height: 100%; }
-    
-    .sheet-handle { display: none; width: 100%; padding: 8px 0; align-items: center; justify-content: center; cursor: pointer; }
-    .sheet-bar { width: 40px; height: 4px; background: #64748b; border-radius: 2px; }
+
+    /* 電腦版隱藏中間拖曳條 */
+    #dragSplitter { display: none; }
 
     .control-panel { background: #0f172a; padding: 14px; border-radius: 12px; margin-bottom: 14px; border: 1px solid #334155; }
     .search-box { position: relative; margin-bottom: 10px; }
@@ -111,36 +111,46 @@
     .popup-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 8px; }
     .popup-btn { text-align: center; border: none; padding: 5px 3px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 3px; }
 
-    /* 手機端 Google Maps 抽屜式 (Bottom Sheet) 比例體驗 */
+    /* 手機版：自由拖曳調整比例 (Splitter Mode) */
     @media (max-width: 768px) {
-      body { position: relative; }
-      #map { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
-      #sidebar { 
-        position: absolute; 
-        bottom: 0; 
-        left: 0; 
-        width: 100%; 
-        height: 82vh; 
-        transform: translateY(calc(82vh - 24vh)); 
-        z-index: 1000; 
-        border-radius: 18px 18px 0 0; 
-        box-shadow: 0 -4px 20px rgba(0,0,0,0.6); 
-        padding: 6px 16px 24px 16px;
+      body { flex-direction: column; }
+      #map { width: 100%; height: 65%; flex: none; }
+      
+      #dragSplitter {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 16px;
+        background: #0f172a;
+        cursor: row-resize;
+        touch-action: none;
+        user-select: none;
+        border-top: 1px solid #334155;
+        border-bottom: 1px solid #334155;
+        flex-shrink: 0;
+        z-index: 1001;
       }
-      #sidebar.sheet-expanded {
-        transform: translateY(0);
+      .splitter-bar {
+        width: 44px;
+        height: 4px;
+        background: #64748b;
+        border-radius: 2px;
       }
-      .sheet-handle { display: flex; }
+      
+      #sidebar {
+        width: 100%;
+        height: calc(35% - 16px);
+        flex: none;
+        box-shadow: none;
+        padding: 14px 16px 30px 16px;
+      }
     }
   </style>
 </head>
 <body>
 
   <div id="sidebar">
-    <div class="sheet-handle" onclick="toggleMobileSheet()">
-      <span class="sheet-bar"></span>
-    </div>
-
     <div class="control-panel">
       <div class="search-box">
         <span class="search-icon">🔍</span>
@@ -298,6 +308,11 @@
     </div>
   </div>
 
+  <!-- 手機端可隨意上下拖曳的分隔把手 (Splitter) -->
+  <div id="dragSplitter">
+    <span class="splitter-bar"></span>
+  </div>
+
   <div id="map"></div>
 
   <script>
@@ -369,18 +384,41 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // 手機抽屜開關切換
-    window.toggleMobileSheet = function(forceExpand) {
-      const sidebar = document.getElementById('sidebar');
-      if (forceExpand === true) {
-        sidebar.classList.add('sheet-expanded');
-      } else if (forceExpand === false) {
-        sidebar.classList.remove('sheet-expanded');
-      } else {
-        sidebar.classList.toggle('sheet-expanded');
+    /* 手機端把手上下拖曳調整「地圖 vs 面板」高度機制 */
+    const splitter = document.getElementById('dragSplitter');
+    const mapEl = document.getElementById('map');
+    const sidebarEl = document.getElementById('sidebar');
+    let isDraggingSplitter = false;
+
+    function handleSplitterMove(clientY) {
+      const totalH = window.innerHeight;
+      const splitterH = 16;
+      // 限制地圖高度在 20% ~ 80% 之間，避免切出邊界
+      let newMapH = Math.max(totalH * 0.2, Math.min(totalH * 0.8, clientY));
+      let newSidebarH = totalH - newMapH - splitterH;
+
+      mapEl.style.height = `${newMapH}px`;
+      sidebarEl.style.height = `${newSidebarH}px`;
+      map.invalidateSize();
+    }
+
+    splitter.addEventListener('touchstart', (e) => {
+      isDraggingSplitter = true;
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+      if (!isDraggingSplitter) return;
+      if (e.touches && e.touches[0]) {
+        handleSplitterMove(e.touches[0].clientY);
       }
-      setTimeout(() => map.invalidateSize(), 300);
-    };
+    }, { passive: true });
+
+    window.addEventListener('touchend', () => {
+      if (isDraggingSplitter) {
+        isDraggingSplitter = false;
+        map.invalidateSize();
+      }
+    });
 
     clinicsRef.on('value', (snapshot) => {
       const data = snapshot.val();
@@ -598,7 +636,6 @@
             iconSize: [26, 26],
             iconAnchor: [13, 13]
           });
-          // 預設強制鎖定 draggable: false
           marker = L.marker([item.lat, item.lng], { icon: vipIcon, draggable: false }).addTo(map);
         } else {
           const pIcon = L.divIcon({
@@ -615,13 +652,11 @@
             iconSize: [20, 20],
             iconAnchor: [10, 10]
           });
-          // 預設強制鎖定 draggable: false
           marker = L.marker([item.lat, item.lng], { icon: pIcon, draggable: false }).addTo(map);
         }
 
         marker.clinicId = item.id;
 
-        // 拖曳放開後更新 Firebase 並立即重新上鎖
         marker.on('dragend', function(e) {
           const newPos = e.target.getLatLng();
           clinicsRef.child(item.id).update({
@@ -753,7 +788,7 @@
 
       const cover = pptx.addSlide();
       cover.background = { color: "0F172A" };
-      cover.addText("雙北基醫美拓展戰報", {
+      cover.addText("新北北基醫美拓展戰報", {
         x: 1.0, y: 2.0, w: 8.5, h: 1.2,
         fontSize: 36, bold: true, color: "38BDF8"
       });
@@ -841,8 +876,6 @@
       submitBtn.innerText = '💾 儲存並同步至雲端';
       submitBtn.classList.add('btn-update');
 
-      // 手機端編輯時自動拉起抽屜
-      toggleMobileSheet(true);
       document.getElementById('sidebar').scrollTop = 160;
     };
 
@@ -934,7 +967,6 @@
           await clinicsRef.child(editingId).set(updatedClinic);
           map.closePopup();
           resetFormToCreate();
-          toggleMobileSheet(false); // 儲存後手機抽屜自動推回大地圖
         }
         return;
       }
@@ -971,7 +1003,6 @@
 
           map.setView([coords.lat, coords.lng], 16);
           e.target.reset();
-          toggleMobileSheet(false); // 新增完成後手機抽屜自動推回大地圖
         } else {
           alert('找不到這個地址，請確認路名與門牌填寫是否正確！');
         }
