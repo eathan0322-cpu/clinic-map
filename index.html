@@ -296,7 +296,7 @@
     <div class="control-panel" id="topControlPanel">
       <div class="search-box">
         <span class="search-icon">🔍</span>
-        <input type="text" id="searchInput" class="search-input" placeholder="搜尋診所、地址、機台或日期..." oninput="handleSearch()">
+        <input type="text" id="searchInput" class="search-input" placeholder="搜尋診所、地址、機台、窗口或日期..." oninput="handleSearch()">
         <button type="button" id="searchClearBtn" class="search-clear-btn" onclick="clearSearch()" title="清除搜尋">✕</button>
       </div>
       
@@ -417,6 +417,12 @@
       <div class="form-group">
         <label>現有機台 / 競品與耗材需求</label>
         <input type="text" id="equipment" placeholder="例如：海芙三代、玩美電波、探頭耗材量大">
+      </div>
+
+      <!-- 關鍵決策窗口備忘小標籤 -->
+      <div class="form-group">
+        <label>👤 關鍵決策窗口（院長 / 店長 / 總監）</label>
+        <input type="text" id="contactPerson" placeholder="例如：陳院長（重臨床數據）、李店長（好溝通）">
       </div>
 
       <div class="form-group">
@@ -657,7 +663,8 @@
         ...item,
         clientType: item.clientType || 'prospect',
         lastVisitDate: item.lastVisitDate || '',
-        followUpDate: item.followUpDate || ''
+        followUpDate: item.followUpDate || '',
+        contactPerson: item.contactPerson || ''
       }));
       
       renderMap();
@@ -681,7 +688,6 @@
       const clearBtn = document.getElementById('searchClearBtn');
       searchQuery = inputEl.value.trim().toLowerCase();
       
-      // 控制清空按鈕顯示/隱藏
       if (searchQuery.length > 0) {
         clearBtn.style.display = 'flex';
       } else {
@@ -790,13 +796,15 @@
           statusText = `今日預計拜訪`;
         }
 
+        const contactInfo = c.contactPerson ? ` | 👤 ${c.contactPerson}` : '';
+
         const div = document.createElement('div');
         div.className = `reminder-item ${borderClass}`;
         div.onclick = () => focusOnClinic(c.id);
         div.innerHTML = `
           <div>
             <strong style="color:#f1f5f9;">${c.name}</strong>
-            <span style="font-size:11px; color:#94a3b8; margin-left:4px;">(${c.district})</span>
+            <span style="font-size:11px; color:#94a3b8; margin-left:4px;">(${c.district}${contactInfo})</span>
           </div>
           <span class="rem-tag ${tagClass}">${statusText}</span>
         `;
@@ -844,6 +852,7 @@
           (item.name && item.name.toLowerCase().includes(searchQuery)) ||
           (item.address && item.address.toLowerCase().includes(searchQuery)) ||
           (item.equipment && item.equipment.toLowerCase().includes(searchQuery)) ||
+          (item.contactPerson && item.contactPerson.toLowerCase().includes(searchQuery)) ||
           (item.notes && item.notes.toLowerCase().includes(searchQuery)) ||
           (item.lastVisitDate && item.lastVisitDate.includes(searchQuery)) ||
           (item.followUpDate && item.followUpDate.includes(searchQuery));
@@ -916,6 +925,7 @@
 
         const lastVisitText = item.lastVisitDate ? `📅 上次拜訪：${item.lastVisitDate}` : '📅 上次拜訪：尚未記錄';
         const followUpText = item.followUpDate ? `🔔 預計複訪：${item.followUpDate}` : '';
+        const contactPersonText = item.contactPerson ? `👤 窗口：${item.contactPerson}` : '👤 窗口：未建置';
 
         const popupContent = `
           <div style="font-size:13px; min-width: 220px;">
@@ -927,6 +937,7 @@
             <div class="popup-date-box">
               <div style="color: #cbd5e1;">${lastVisitText}</div>
               ${followUpText ? `<div style="color: #facc15; font-weight:bold; margin-top:2px;">${followUpText}</div>` : ''}
+              <div style="color: #38bdf8; font-weight:bold; margin-top:2px;">${contactPersonText}</div>
             </div>
 
             ${!isExisting ? `<b style="color:#38bdf8;">推進階段：</b>${statusNames[item.status] || item.status}<br>` : ''}
@@ -1001,6 +1012,7 @@
         "推進階段": c.clientType === 'existing' ? '常態巡護/擴機' : (statusNames[c.status] || c.status),
         "地址": c.address || "",
         "現有機台與耗材需求": c.equipment || "未註明",
+        "關鍵決策窗口": c.contactPerson || "未建置",
         "最新情報備忘與策略": c.notes || "無",
         "上次拜訪日期": c.lastVisitDate || "未到訪",
         "預計複訪日期": c.followUpDate || "無"
@@ -1067,7 +1079,6 @@
         fontSize: 20, bold: true, color: "F8FAFC"
       });
 
-      // 左圖：客群維度圓餅圖
       const clientTypeLabels = ["⭐ 既有客戶", "🎯 陌開客戶"];
       const clientTypeValues = [clientTypeCounts.existing, clientTypeCounts.prospect];
       const clientTypeColors = ["EAB308", "0284C7"];
@@ -1088,7 +1099,6 @@
         dataLabelColor: 'FFFFFF'
       });
 
-      // 右圖：陌開階段圓餅/環形圖
       const statusLabels = ["🔴 未探勘", "🟡 初訪摸底", "🟠 鎖定窗口", "🟢 評估試機", "🟣 合作結案", "⚪ 暫緩擱置"];
       const statusValues = [
         statusCounts.red, statusCounts.yellow, statusCounts.orange,
@@ -1141,7 +1151,7 @@
         showLegend: false
       });
 
-      // ===== Slide 4: 重點攻堅與 7 天複訪行動清單 =====
+      // ===== Slide 4: 重點攻堅與 7 天複訪行動清單 (含決策窗口) =====
       const slide4 = pptx.addSlide();
       slide4.background = { color: "1E293B" };
       slide4.addText(`重點攻堅目標與近 7 天複訪行動清單`, {
@@ -1176,9 +1186,10 @@
             { text: "診所名稱", options: { bold: true, fill: "0F172A", color: "38BDF8" } },
             { text: "轄區", options: { bold: true, fill: "0F172A", color: "38BDF8" } },
             { text: "當前狀態", options: { bold: true, fill: "0F172A", color: "38BDF8" } },
-            { text: "現有機台 / 耗材需求", options: { bold: true, fill: "0F172A", color: "38BDF8" } },
+            { text: "關鍵決策窗口", options: { bold: true, fill: "0F172A", color: "38BDF8" } },
+            { text: "機台/耗材需求", options: { bold: true, fill: "0F172A", color: "38BDF8" } },
             { text: "預計複訪日", options: { bold: true, fill: "0F172A", color: "38BDF8" } },
-            { text: "戰情備忘與下一步策略", options: { bold: true, fill: "0F172A", color: "38BDF8" } }
+            { text: "戰情策略備忘", options: { bold: true, fill: "0F172A", color: "38BDF8" } }
           ]
         ];
 
@@ -1189,6 +1200,7 @@
             { text: item.name || '', options: { color: "FFFFFF" } },
             { text: item.district || '', options: { color: "CBD5E1" } },
             { text: stText, options: { color: "FACC15" } },
+            { text: item.contactPerson || '未建置', options: { color: "38BDF8" } },
             { text: item.equipment || '未註明', options: { color: "CBD5E1" } },
             { text: item.followUpDate || '未排定', options: { color: "38BDF8" } },
             { text: item.notes || '無', options: { color: "94A3B8" } }
@@ -1197,9 +1209,9 @@
 
         slide4.addTable(tableRows, {
           x: 0.8, y: 1.2, w: 11.5,
-          colW: [2.0, 1.0, 1.8, 2.2, 1.4, 3.1],
+          colW: [1.8, 0.9, 1.6, 1.8, 1.8, 1.2, 2.4],
           border: { pt: 1, color: "334155" },
-          fontSize: 11,
+          fontSize: 10.5,
           align: "center",
           valign: "middle"
         });
@@ -1221,6 +1233,7 @@
       document.getElementById('address').value = target.address;
       document.getElementById('status').value = target.status || 'red';
       document.getElementById('equipment').value = target.equipment || '';
+      document.getElementById('contactPerson').value = target.contactPerson || '';
       document.getElementById('notes').value = target.notes || '';
 
       handleClientTypeChange();
@@ -1234,7 +1247,6 @@
 
       map.closePopup();
 
-      // 手機端：確保解除全地圖模式，面板升起至 80% 高度以利編輯
       if (window.innerWidth <= 768) {
         document.body.classList.remove('mode-full-map');
         document.getElementById('btnModeMap').classList.remove('active');
@@ -1246,7 +1258,6 @@
         map.invalidateSize();
       }
 
-      // 自動將面板內部平滑捲動至編輯表單頂端
       const headerAnchor = document.getElementById('formHeaderAnchor');
       if (headerAnchor) {
         sidebar.scrollTop = headerAnchor.offsetTop - 10;
@@ -1266,7 +1277,6 @@
       submitBtn.innerText = '定位並同步至雲端';
       submitBtn.classList.remove('btn-update');
 
-      // 手機端恢復原比例
       if (window.innerWidth <= 768) {
         sidebar.style.height = '';
         mapWrapper.style.height = '';
@@ -1325,6 +1335,7 @@
       const name = document.getElementById('name').value.trim();
       const clientType = document.getElementById('clientType').value;
       const followUpDate = document.getElementById('followUpDate').value;
+      const contactPerson = document.getElementById('contactPerson').value.trim();
       const detectedDistrict = detectDistrict(address);
 
       const today = new Date();
@@ -1341,6 +1352,7 @@
             district: detectedDistrict,
             status: clientType === 'existing' ? 'purple' : document.getElementById('status').value,
             equipment: document.getElementById('equipment').value,
+            contactPerson: contactPerson,
             notes: document.getElementById('notes').value,
             lastVisitDate: todayStr,
             followUpDate: followUpDate
@@ -1371,6 +1383,7 @@
             lng: coords.lng,
             status: clientType === 'existing' ? 'purple' : document.getElementById('status').value,
             equipment: document.getElementById('equipment').value,
+            contactPerson: contactPerson,
             notes: document.getElementById('notes').value,
             lastVisitDate: todayStr,
             followUpDate: followUpDate
