@@ -26,9 +26,35 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
     body { display: flex; height: 100vh; overflow: hidden; background: #0f172a; color: #f8fafc; }
-    #sidebar { width: 420px; height: 100%; overflow-y: auto; background: #1e293b; padding: 18px; box-shadow: 2px 0 10px rgba(0,0,0,0.5); z-index: 1000; flex-shrink: 0; }
+    
+    /* 桌機版：面板維持在左邊 */
+    #sidebar { 
+      width: 420px; 
+      height: 100%; 
+      background: #1e293b; 
+      box-shadow: 2px 0 10px rgba(0,0,0,0.5); 
+      z-index: 1000; 
+      flex-shrink: 0; 
+      display: flex;
+      flex-direction: column;
+    }
     #map-wrapper { flex: 1; height: 100%; position: relative; }
     #map { width: 100%; height: 100%; }
+
+    /* 面板頂部固定區（小橫槓 + 搜尋控制列，永遠不可滾動） */
+    .sidebar-fixed-top {
+      padding: 18px 18px 0 18px;
+      flex-shrink: 0;
+      background: #1e293b;
+    }
+
+    /* 面板下方可滾動內容區（提醒、看板、建立表單） */
+    .sidebar-scrollable-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 18px 24px 18px;
+      -webkit-overflow-scrolling: touch;
+    }
 
     /* 面板頂部拖曳小橫槓 (手機版專用) */
     .sheet-drag-area {
@@ -208,7 +234,7 @@
     .popup-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 8px; }
     .popup-btn { text-align: center; border: none; padding: 5px 3px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 3px; }
 
-    /* 手機版：地圖在上、面板在下 + 頂部控制面板釘選不跑位 */
+    /* 手機版：地圖在上(order:1)、面板在下(order:2) */
     @media (max-width: 768px) {
       body { flex-direction: column; }
       #map-wrapper { order: 1; width: 100%; height: 60%; flex: none; }
@@ -218,23 +244,19 @@
         height: 40%; 
         flex: none; 
         box-shadow: 0 -4px 16px rgba(0,0,0,0.5); 
-        padding: 0 16px 28px 16px; 
+        padding: 0; 
         border-radius: 16px 16px 0 0;
-        overflow-y: auto;
+        overflow: hidden; 
       }
-      .sheet-drag-area { 
-        display: flex; 
-        position: sticky;
-        top: 0;
-        z-index: 100;
-      }
+      .sheet-drag-area { display: flex; }
       .global-view-toggle-btn { display: block; }
+      .sidebar-fixed-top { padding-top: 0; }
 
       body.mode-full-map #map-wrapper { height: 100% !important; }
-      body.mode-full-map #sidebar { height: 0% !important; padding: 0 !important; overflow: hidden !important; display: none !important; }
+      body.mode-full-map #sidebar { height: 0% !important; display: none !important; }
 
       body.mode-full-panel #map-wrapper { height: 0% !important; display: none !important; }
-      body.mode-full-panel #sidebar { height: 100% !important; display: block !important; }
+      body.mode-full-panel #sidebar { height: 100% !important; display: flex !important; }
     }
   </style>
 </head>
@@ -243,173 +265,179 @@
   <!-- 手機端全域浮動視圖切換鍵（常駐最頂層） -->
   <button type="button" id="globalViewToggleBtn" class="global-view-toggle-btn" onclick="cycleMobileView()">🗺️ 全螢幕地圖</button>
 
+  <!-- 桌機版排在最前面 = 顯示在左側 -->
+  <div id="sidebar">
+    <!-- 頂部固定區：小橫槓 + 搜尋控制面板（完全禁止捲動，永遠釘在頭頂） -->
+    <div class="sidebar-fixed-top">
+      <div class="sheet-drag-area" id="sheetDragArea">
+        <span class="sheet-drag-pill"></span>
+      </div>
+
+      <div class="control-panel">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" class="search-input" placeholder="搜尋診所、地址、機台或日期..." oninput="handleSearch()">
+        </div>
+        
+        <div class="filter-row">
+          <div>
+            <label>客群維度</label>
+            <select id="clientTypeFilter" class="filter-select" onchange="applyFilters()">
+              <option value="ALL">全部客戶群體</option>
+              <option value="prospect">🎯 陌開客戶（主攻設備）</option>
+              <option value="existing">⭐ 既有客戶（耗材/擴機）</option>
+            </select>
+          </div>
+          <div>
+            <label>行政責任轄區</label>
+            <select id="districtFilter" class="filter-select" onchange="applyFilters(true)">
+              <option value="ALL">🌐 全責任區顯示</option>
+              <option value="板橋區">板橋區</option>
+              <option value="新莊區">新莊區</option>
+              <option value="中和區">中和區</option>
+              <option value="永和區">永和區</option>
+              <option value="三重區">三重區</option>
+              <option value="林口區">林口區</option>
+              <option value="基隆市">基隆市</option>
+              <option value="蘆洲區">蘆洲區</option>
+              <option value="土城區">土城區</option>
+              <option value="新店區">新店區</option>
+              <option value="淡水區">淡水區</option>
+              <option value="汐止區">汐止區</option>
+              <option value="三峽區">三峽區</option>
+              <option value="鶯歌區">鶯歌區</option>
+              <option value="樹林區">樹林區</option>
+              <option value="泰山區">泰山區</option>
+              <option value="五股區">五股區</option>
+              <option value="八里區">八里區</option>
+              <option value="其他">其他區域</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filter-full">
+          <label>推進階段篩選（僅限陌開客戶）</label>
+          <select id="statusFilter" class="filter-select" onchange="applyFilters()">
+            <option value="ALL">🌈 全部階段顯示</option>
+            <option value="red">🔴 未探勘 / 迷霧防禦</option>
+            <option value="yellow">🟡 初訪摸底（DM留置/競品盤點）</option>
+            <option value="orange">🟠 鎖定對話（取得院長/店長窗口）</option>
+            <option value="green">🟢 評估試機（DEMO/提報報價）</option>
+            <option value="purple">🟣 合作結案（已成交/常態維護）</option>
+            <option value="gray">⚪ 暫緩擱置（多次碰壁/冷凍抗性）</option>
+          </select>
+        </div>
+
+        <div class="export-btn-row">
+          <button type="button" class="btn-export-excel" onclick="exportToExcel()">📊 匯出 Excel (.xlsx)</button>
+          <button type="button" class="btn-export-ppt" onclick="exportToPPT()">📑 匯出簡報 (.pptx)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 下方專屬滾動區：提醒看板、建立表單與圖例 -->
+    <div class="sidebar-scrollable-body" id="sidebarScrollBody">
+      <!-- 智慧複訪提醒看板（7天內即將到期/逾期） -->
+      <div id="reminderPanel">
+        <div class="reminder-header" onclick="toggleReminderList()">
+          <div class="reminder-title">
+            <span>🔔 近7天拜訪追蹤</span>
+            <span class="reminder-badge" id="reminderCount">0</span>
+          </div>
+          <span id="reminderArrow" style="font-size:11px; color:#94a3b8;">▼ 展開</span>
+        </div>
+        <div class="reminder-list" id="reminderList" style="display:none;"></div>
+      </div>
+
+      <div class="dashboard">
+        <div class="dash-header">
+          <div class="dash-title" id="currentScopeTitle">📍 板橋區戰情進度</div>
+          <div class="dash-sync" id="syncStatus">🟢 雲端同步完成</div>
+        </div>
+        <div class="dash-score" id="totalCount">0 <span>家顯示中</span></div>
+        <div class="progress-bar" id="progressBar" title="點擊進度條可依比例快速篩選陌開階段"></div>
+      </div>
+
+      <div class="form-header">
+        <h2 id="formTitle">⚔️ 建立與維護目標</h2>
+        <button type="button" id="cancelEditBtn" class="cancel-edit-btn" onclick="resetFormToCreate()">取消編輯</button>
+      </div>
+
+      <form id="clinicForm">
+        <input type="hidden" id="editingId" value="">
+        <input type="hidden" id="lastVisitDate" value="">
+
+        <div class="form-group">
+          <label>客戶屬性</label>
+          <select id="clientType" onchange="handleClientTypeChange()">
+            <option value="prospect">🎯 陌開客戶（主攻設備推展）</option>
+            <option value="existing">⭐ 既有客戶（耗材巡補 / 擴機需求）</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>診所名稱</label>
+          <input type="text" id="name" placeholder="例如：板橋光澤診所" required>
+        </div>
+        <div class="form-group">
+          <label>診所地址</label>
+          <input type="text" id="address" placeholder="例如：新北市板橋區館前東路2號" required>
+        </div>
+
+        <div class="form-group" id="statusFormGroup">
+          <label>推進階段（戰情色號）</label>
+          <select id="status">
+            <option value="red">🔴 未探勘 / 迷霧防禦</option>
+            <option value="yellow">🟡 初訪摸底（DM留置/競品盤點）</option>
+            <option value="orange">🟠 鎖定對話（取得院長/店長窗口）</option>
+            <option value="green">🟢 評估試機（DEMO/提報報價）</option>
+            <option value="purple">🟣 合作結案（已成交/常態維護）</option>
+            <option value="gray">⚪ 暫緩擱置（多次碰壁/冷凍抗性）</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>現有機台 / 競品與耗材需求</label>
+          <input type="text" id="equipment" placeholder="例如：海芙三代、玩美電波、探頭耗材量大">
+        </div>
+
+        <div class="form-group">
+          <label>🔔 預計複訪日期（選填）</label>
+          <input type="date" id="followUpDate">
+          <div class="quick-date-row">
+            <button type="button" class="quick-date-btn" onclick="setQuickDate(3)">+3天</button>
+            <button type="button" class="quick-date-btn" onclick="setQuickDate(7)">+7天(下週)</button>
+            <button type="button" class="quick-date-btn" onclick="setQuickDate(14)">+14天(兩週)</button>
+            <button type="button" class="quick-date-btn" onclick="document.getElementById('followUpDate').value=''" style="color:#94a3b8;">清除</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>戰情情報與下一步策略</label>
+          <textarea id="notes" rows="3" placeholder="例如：店長態度保留，目前合約綁死，預計半年後再重啟接觸"></textarea>
+        </div>
+        <button type="submit" id="submitBtn" class="btn-primary">定位並同步至雲端</button>
+      </form>
+
+      <div class="legend">
+        <div style="font-weight: bold; margin-bottom: 6px; color:#94a3b8;">階段色標與圖例（點擊可快速過濾）：</div>
+        <div class="legend-grid">
+          <div class="legend-item" onclick="quickFilterStatus('red')">🔴 未探勘 / 迷霧</div>
+          <div class="legend-item" onclick="quickFilterStatus('yellow')">🟡 初訪摸底</div>
+          <div class="legend-item" onclick="quickFilterStatus('orange')">🟠 鎖定對話窗口</div>
+          <div class="legend-item" onclick="quickFilterStatus('green')">🟢 評估試機 / 報價</div>
+          <div class="legend-item" onclick="quickFilterStatus('purple')">🟣 陌開結案</div>
+          <div class="legend-item" onclick="quickFilterStatus('gray')">⚪ 暫緩擱置 / 冷凍</div>
+          <div class="legend-item" style="cursor:default; grid-column: span 2;"><span style="display:inline-flex; align-items:center; justify-content:center; width:17px; height:17px; background:#0f172a; border:1.5px solid #eab308; border-radius:50%; font-size:10px; color:#facc15;">⭐</span> 既有客戶 (黑金星鑽)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="map-wrapper">
     <!-- 回到我的位置定位快捷鈕 -->
     <div class="btn-locate-me" onclick="locateUser(true)" title="定位到我的目前位置">🎯</div>
     <div id="map"></div>
-  </div>
-
-  <div id="sidebar">
-    <!-- 面板頂端小橫槓 -->
-    <div class="sheet-drag-area" id="sheetDragArea">
-      <span class="sheet-drag-pill"></span>
-    </div>
-
-    <div class="control-panel">
-      <div class="search-box">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="searchInput" class="search-input" placeholder="搜尋診所、地址、機台或日期..." oninput="handleSearch()">
-      </div>
-      
-      <div class="filter-row">
-        <div>
-          <label>客群維度</label>
-          <select id="clientTypeFilter" class="filter-select" onchange="applyFilters()">
-            <option value="ALL">全部客戶群體</option>
-            <option value="prospect">🎯 陌開客戶（主攻設備）</option>
-            <option value="existing">⭐ 既有客戶（耗材/擴機）</option>
-          </select>
-        </div>
-        <div>
-          <label>行政責任轄區</label>
-          <select id="districtFilter" class="filter-select" onchange="applyFilters(true)">
-            <option value="ALL">🌐 全責任區顯示</option>
-            <option value="板橋區">板橋區</option>
-            <option value="新莊區">新莊區</option>
-            <option value="中和區">中和區</option>
-            <option value="永和區">永和區</option>
-            <option value="三重區">三重區</option>
-            <option value="林口區">林口區</option>
-            <option value="基隆市">基隆市</option>
-            <option value="蘆洲區">蘆洲區</option>
-            <option value="土城區">土城區</option>
-            <option value="新店區">新店區</option>
-            <option value="淡水區">淡水區</option>
-            <option value="汐止區">汐止區</option>
-            <option value="三峽區">三峽區</option>
-            <option value="鶯歌區">鶯歌區</option>
-            <option value="樹林區">樹林區</option>
-            <option value="泰山區">泰山區</option>
-            <option value="五股區">五股區</option>
-            <option value="八里區">八里區</option>
-            <option value="其他">其他區域</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="filter-full">
-        <label>推進階段篩選（僅限陌開客戶）</label>
-        <select id="statusFilter" class="filter-select" onchange="applyFilters()">
-          <option value="ALL">🌈 全部階段顯示</option>
-          <option value="red">🔴 未探勘 / 迷霧防禦</option>
-          <option value="yellow">🟡 初訪摸底（DM留置/競品盤點）</option>
-          <option value="orange">🟠 鎖定對話（取得院長/店長窗口）</option>
-          <option value="green">🟢 評估試機（DEMO/提報報價）</option>
-          <option value="purple">🟣 合作結案（已成交/常態維護）</option>
-          <option value="gray">⚪ 暫緩擱置（多次碰壁/冷凍抗性）</option>
-        </select>
-      </div>
-
-      <div class="export-btn-row">
-        <button type="button" class="btn-export-excel" onclick="exportToExcel()">📊 匯出 Excel (.xlsx)</button>
-        <button type="button" class="btn-export-ppt" onclick="exportToPPT()">📑 匯出簡報 (.pptx)</button>
-      </div>
-    </div>
-
-    <!-- 智慧複訪提醒看板（7天內即將到期/逾期） -->
-    <div id="reminderPanel">
-      <div class="reminder-header" onclick="toggleReminderList()">
-        <div class="reminder-title">
-          <span>🔔 近7天拜訪追蹤</span>
-          <span class="reminder-badge" id="reminderCount">0</span>
-        </div>
-        <span id="reminderArrow" style="font-size:11px; color:#94a3b8;">▼ 展開</span>
-      </div>
-      <div class="reminder-list" id="reminderList" style="display:none;"></div>
-    </div>
-
-    <div class="dashboard">
-      <div class="dash-header">
-        <div class="dash-title" id="currentScopeTitle">📍 板橋區戰情進度</div>
-        <div class="dash-sync" id="syncStatus">🟢 雲端同步完成</div>
-      </div>
-      <div class="dash-score" id="totalCount">0 <span>家顯示中</span></div>
-      <div class="progress-bar" id="progressBar" title="點擊進度條可依比例快速篩選陌開階段"></div>
-    </div>
-
-    <div class="form-header">
-      <h2 id="formTitle">⚔️ 建立與維護目標</h2>
-      <button type="button" id="cancelEditBtn" class="cancel-edit-btn" onclick="resetFormToCreate()">取消編輯</button>
-    </div>
-
-    <form id="clinicForm">
-      <input type="hidden" id="editingId" value="">
-      <input type="hidden" id="lastVisitDate" value="">
-
-      <div class="form-group">
-        <label>客戶屬性</label>
-        <select id="clientType" onchange="handleClientTypeChange()">
-          <option value="prospect">🎯 陌開客戶（主攻設備推展）</option>
-          <option value="existing">⭐ 既有客戶（耗材巡補 / 擴機需求）</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label>診所名稱</label>
-        <input type="text" id="name" placeholder="例如：板橋光澤診所" required>
-      </div>
-      <div class="form-group">
-        <label>診所地址</label>
-        <input type="text" id="address" placeholder="例如：新北市板橋區館前東路2號" required>
-      </div>
-
-      <div class="form-group" id="statusFormGroup">
-        <label>推進階段（戰情色號）</label>
-        <select id="status">
-          <option value="red">🔴 未探勘 / 迷霧防禦</option>
-          <option value="yellow">🟡 初訪摸底（DM留置/競品盤點）</option>
-          <option value="orange">🟠 鎖定對話（取得院長/店長窗口）</option>
-          <option value="green">🟢 評估試機（DEMO/提報報價）</option>
-          <option value="purple">🟣 合作結案（已成交/常態維護）</option>
-          <option value="gray">⚪ 暫緩擱置（多次碰壁/冷凍抗性）</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label>現有機台 / 競品與耗材需求</label>
-        <input type="text" id="equipment" placeholder="例如：海芙三代、玩美電波、探頭耗材量大">
-      </div>
-
-      <div class="form-group">
-        <label>🔔 預計複訪日期（選填）</label>
-        <input type="date" id="followUpDate">
-        <div class="quick-date-row">
-          <button type="button" class="quick-date-btn" onclick="setQuickDate(3)">+3天</button>
-          <button type="button" class="quick-date-btn" onclick="setQuickDate(7)">+7天(下週)</button>
-          <button type="button" class="quick-date-btn" onclick="setQuickDate(14)">+14天(兩週)</button>
-          <button type="button" class="quick-date-btn" onclick="document.getElementById('followUpDate').value=''" style="color:#94a3b8;">清除</button>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>戰情情報與下一步策略</label>
-        <textarea id="notes" rows="3" placeholder="例如：店長態度保留，目前合約綁死，預計半年後再重啟接觸"></textarea>
-      </div>
-      <button type="submit" id="submitBtn" class="btn-primary">定位並同步至雲端</button>
-    </form>
-
-    <div class="legend">
-      <div style="font-weight: bold; margin-bottom: 6px; color:#94a3b8;">階段色標與圖例（點擊可快速過濾）：</div>
-      <div class="legend-grid">
-        <div class="legend-item" onclick="quickFilterStatus('red')">🔴 未探勘 / 迷霧</div>
-        <div class="legend-item" onclick="quickFilterStatus('yellow')">🟡 初訪摸底</div>
-        <div class="legend-item" onclick="quickFilterStatus('orange')">🟠 鎖定對話窗口</div>
-        <div class="legend-item" onclick="quickFilterStatus('green')">🟢 評估試機 / 報價</div>
-        <div class="legend-item" onclick="quickFilterStatus('purple')">🟣 陌開結案</div>
-        <div class="legend-item" onclick="quickFilterStatus('gray')">⚪ 暫緩擱置 / 冷凍</div>
-        <div class="legend-item" style="cursor:default; grid-column: span 2;"><span style="display:inline-flex; align-items:center; justify-content:center; width:17px; height:17px; background:#0f172a; border:1.5px solid #eab308; border-radius:50%; font-size:10px; color:#facc15;">⭐</span> 既有客戶 (黑金星鑽)</div>
-      </div>
-    </div>
   </div>
 
   <script>
@@ -540,7 +568,7 @@
 
     initUserLocation();
 
-    /* 手機端頂部膠囊小橫槓無段拖曳邏輯（鎖死 scrollTop 保持頂部不捲動） */
+    /* 手機端頂部膠囊小橫槓無段拖曳邏輯（徹底防捲動） */
     const dragArea = document.getElementById('sheetDragArea');
     const mapWrapper = document.getElementById('map-wrapper');
     const sidebar = document.getElementById('sidebar');
@@ -548,32 +576,30 @@
 
     function updateSheetHeight(clientY) {
       const windowH = window.innerHeight;
-      let newSidebarH = Math.max(windowH * 0.15, Math.min(windowH * 0.85, windowH - clientY));
+      let newSidebarH = Math.max(windowH * 0.15, Math.min(windowH * 0.88, windowH - clientY));
       let newMapH = windowH - newSidebarH;
 
       sidebar.style.height = `${newSidebarH}px`;
       mapWrapper.style.height = `${newMapH}px`;
-      // 關鍵修復：拖曳過程中永遠將滾動條鎖定在 0，防止圖1的頂部被吃掉
-      sidebar.scrollTop = 0;
       map.invalidateSize();
     }
 
     dragArea.addEventListener('touchstart', (e) => {
       isDraggingPill = true;
-      sidebar.scrollTop = 0;
-    }, { passive: true });
+      e.preventDefault();
+    }, { passive: false });
 
     window.addEventListener('touchmove', (e) => {
       if (!isDraggingPill) return;
       if (e.touches && e.touches[0]) {
+        e.preventDefault();
         updateSheetHeight(e.touches[0].clientY);
       }
-    }, { passive: true });
+    }, { passive: false });
 
     window.addEventListener('touchend', () => {
       if (isDraggingPill) {
         isDraggingPill = false;
-        sidebar.scrollTop = 0;
         map.invalidateSize();
       }
     });
@@ -603,7 +629,6 @@
         btn.innerText = '🗺️ 全螢幕地圖';
       }
 
-      sidebar.scrollTop = 0;
       setTimeout(() => map.invalidateSize(), 300);
     };
 
@@ -1066,7 +1091,7 @@
       submitBtn.innerText = '💾 儲存並同步至雲端';
       submitBtn.classList.add('btn-update');
 
-      document.getElementById('sidebar').scrollTop = 160;
+      document.getElementById('sidebarScrollBody').scrollTop = 160;
     };
 
     window.resetFormToCreate = function() {
