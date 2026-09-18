@@ -286,7 +286,7 @@
         <span class="sheet-drag-pill"></span>
       </div>
 
-      <div class="control-panel">
+      <div class="control-panel" id="topControlPanel">
         <div class="search-box">
           <span class="search-icon">🔍</span>
           <input type="text" id="searchInput" class="search-input" placeholder="搜尋診所、地址、機台或日期..." oninput="handleSearch()">
@@ -629,7 +629,6 @@
 
       if (target === 'map') {
         if (currentMode === 'full-map') {
-          // 再次點擊已啟動的項目 -> 還原預設
           currentMode = 'default';
           body.classList.remove('mode-full-map', 'mode-full-panel');
           btnMap.classList.remove('active');
@@ -822,7 +821,6 @@
         renderMap();
       }
 
-      // 若在全面板模式下點選，自動還原比例以利檢視地圖標記
       if (currentMode === 'full-panel') {
         toggleDirectView('panel');
       }
@@ -1096,7 +1094,7 @@
       pptx.writeFile({ fileName: `新北北基醫美拓展戰報_${scopeTag}_${todayTag}.pptx` });
     };
 
-    /* 點擊編輯情報：面板自動升起至 80% 高度並聚焦表單 */
+    /* 點擊編輯情報：隱藏上方搜尋控制區，升起面板並聚焦表單 */
     window.startEditClinic = function(id) {
       const target = clinics.find(c => c.id === id);
       if (!target) return;
@@ -1122,23 +1120,23 @@
 
       map.closePopup();
 
-      // 手機端：自動升起面板至 80% 高度以利專心編輯
+      // 手機端：隱藏頂部控制區，升起面板至 80% 高度
       if (window.innerWidth <= 768) {
+        document.getElementById('topControlPanel').style.display = 'none';
         const totalH = window.innerHeight;
         sidebar.style.height = `${totalH * 0.8}px`;
         mapWrapper.style.height = `${totalH * 0.2}px`;
         map.invalidateSize();
       }
 
-      // 自動將下方內容區捲動至表單位置
+      // 自動將下方內容區捲動至最頂端（直接看到編輯表單）
       const scrollBody = document.getElementById('sidebarScrollBody');
-      const headerAnchor = document.getElementById('formHeaderAnchor');
-      if (scrollBody && headerAnchor) {
-        scrollBody.scrollTop = headerAnchor.offsetTop - 10;
+      if (scrollBody) {
+        scrollBody.scrollTop = 0;
       }
     };
 
-    /* 取消編輯或儲存完成：自動降回預設比例 */
+    /* 取消編輯或儲存完成：自動展開頂部控制區，降回預設比例 */
     window.resetFormToCreate = function() {
       document.getElementById('editingId').value = '';
       document.getElementById('lastVisitDate').value = '';
@@ -1150,6 +1148,9 @@
       const submitBtn = document.getElementById('submitBtn');
       submitBtn.innerText = '定位並同步至雲端';
       submitBtn.classList.remove('btn-update');
+
+      // 重新顯示頂部控制區
+      document.getElementById('topControlPanel').style.display = 'block';
 
       // 手機端恢復原比例
       if (window.innerWidth <= 768) {
