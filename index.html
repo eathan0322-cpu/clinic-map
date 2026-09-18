@@ -155,10 +155,31 @@
     }
 
     .control-panel { background: #0f172a; padding: 14px; border-radius: 12px; margin-bottom: 14px; border: 1px solid #334155; }
+    
+    /* 搜尋列容器與清空按鈕樣式 */
     .search-box { position: relative; margin-bottom: 10px; }
-    .search-input { width: 100%; padding: 9px 12px 9px 32px; background: #1e293b; border: 1px solid #475569; border-radius: 6px; color: white; font-size: 13px; }
+    .search-input { width: 100%; padding: 9px 34px 9px 32px; background: #1e293b; border: 1px solid #475569; border-radius: 6px; color: white; font-size: 13px; }
     .search-input:focus { outline: none; border-color: #38bdf8; }
     .search-icon { position: absolute; left: 10px; top: 10px; font-size: 13px; color: #94a3b8; }
+    .search-clear-btn { 
+      position: absolute; 
+      right: 10px; 
+      top: 50%; 
+      transform: translateY(-50%); 
+      background: #475569; 
+      color: #f1f5f9; 
+      border: none; 
+      width: 18px; 
+      height: 18px; 
+      border-radius: 50%; 
+      font-size: 11px; 
+      display: none; 
+      align-items: center; 
+      justify-content: center; 
+      cursor: pointer; 
+      user-select: none;
+    }
+    .search-clear-btn:hover { background: #64748b; }
     
     .filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
     .filter-full { margin-bottom: 8px; }
@@ -276,6 +297,7 @@
       <div class="search-box">
         <span class="search-icon">🔍</span>
         <input type="text" id="searchInput" class="search-input" placeholder="搜尋診所、地址、機台或日期..." oninput="handleSearch()">
+        <button type="button" id="searchClearBtn" class="search-clear-btn" onclick="clearSearch()" title="清除搜尋">✕</button>
       </div>
       
       <div class="filter-row">
@@ -615,7 +637,6 @@
         body.classList.add('mode-full-map');
         btnMap.classList.add('active');
       } else {
-        // 預設模式（60:40 上地圖下邊欄）
         body.classList.remove('mode-full-map');
         btnDefault.classList.add('active');
       }
@@ -656,9 +677,28 @@
     }
 
     function handleSearch() {
-      searchQuery = document.getElementById('searchInput').value.trim().toLowerCase();
+      const inputEl = document.getElementById('searchInput');
+      const clearBtn = document.getElementById('searchClearBtn');
+      searchQuery = inputEl.value.trim().toLowerCase();
+      
+      // 控制清空按鈕顯示/隱藏
+      if (searchQuery.length > 0) {
+        clearBtn.style.display = 'flex';
+      } else {
+        clearBtn.style.display = 'none';
+      }
+      
       renderMap();
     }
+
+    window.clearSearch = function() {
+      const inputEl = document.getElementById('searchInput');
+      inputEl.value = '';
+      document.getElementById('searchClearBtn').style.display = 'none';
+      searchQuery = '';
+      renderMap();
+      inputEl.focus();
+    };
 
     function applyFilters(shouldFly = false) {
       currentDistrict = document.getElementById('districtFilter').value;
@@ -1112,7 +1152,6 @@
       const todayObj = new Date();
       todayObj.setHours(0, 0, 0, 0);
 
-      // 優先挑選：7天內需複訪、或處於試機/鎖定窗口的關鍵診所
       const priorityList = list.filter(c => {
         const isHotStage = (c.status === 'green' || c.status === 'orange');
         let isSoonFollowUp = false;
@@ -1124,7 +1163,7 @@
           if (diff <= 7) isSoonFollowUp = true;
         }
         return isHotStage || isSoonFollowUp;
-      }).slice(0, 6); // 取前 6 大戰略重點
+      }).slice(0, 6);
 
       if (priorityList.length === 0) {
         slide4.addText("目前暫無近 7 天待複訪或評估中之重點目標，可持續開展初訪摸底。", {
