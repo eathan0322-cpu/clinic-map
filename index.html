@@ -79,7 +79,7 @@
       background: #38bdf8;
     }
 
-    /* 二合一獨立切換膠囊按鈕 (手機版專用，常駐最頂層) */
+    /* 三態獨立切換膠囊按鈕 (手機版專用，常駐最頂層) */
     .view-toggle-capsule {
       display: none;
       position: fixed;
@@ -98,9 +98,13 @@
       color: #94a3b8;
       font-size: 11px;
       font-weight: bold;
-      padding: 6px 10px;
+      padding: 6px 9px;
       cursor: pointer;
       transition: 0.2s;
+      border-right: 1px solid #1e293b;
+    }
+    .toggle-sub-btn:last-child {
+      border-right: none;
     }
     .toggle-sub-btn.active {
       background: #0284c7;
@@ -243,7 +247,7 @@
     .popup-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 8px; }
     .popup-btn { text-align: center; border: none; padding: 5px 3px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 3px; }
 
-    /* 手機版：上方地圖、下方雙層面板（頂層釘死絕對不捲動、下層專屬滾動） */
+    /* 手機版：上方地圖、下方雙層面板 */
     @media (max-width: 768px) {
       body { flex-direction: column; }
       #map-wrapper { order: 1; width: 100%; height: 60%; flex: none; transition: height 0.25s ease; }
@@ -272,10 +276,11 @@
 </head>
 <body>
 
-  <!-- 手機端二合一獨立直達切換膠囊鈕（常駐最頂層） -->
+  <!-- 三態獨立直達切換膠囊鈕（地圖 / 預設 / 面板） -->
   <div class="view-toggle-capsule" id="viewToggleCapsule">
-    <button type="button" class="toggle-sub-btn" id="btnModeMap" onclick="toggleDirectView('map')">🗺️ 地圖</button>
-    <button type="button" class="toggle-sub-btn" id="btnModePanel" onclick="toggleDirectView('panel')">📋 面板</button>
+    <button type="button" class="toggle-sub-btn" id="btnModeMap" onclick="setAppViewMode('map')">🗺️ 地圖</button>
+    <button type="button" class="toggle-sub-btn active" id="btnModeDefault" onclick="setAppViewMode('default')">⚖️ 預設</button>
+    <button type="button" class="toggle-sub-btn" id="btnModePanel" onclick="setAppViewMode('panel')">📋 面板</button>
   </div>
 
   <!-- 桌機版排在最前面 = 顯示在左側 -->
@@ -617,42 +622,32 @@
       }
     });
 
-    /* 二合一獨立直達切換邏輯 */
-    let currentMode = 'default';
-    window.toggleDirectView = function(target) {
+    /* 三態獨立切換邏輯 (地圖 / 預設 / 面板) */
+    window.setAppViewMode = function(mode) {
       const body = document.body;
       const btnMap = document.getElementById('btnModeMap');
+      const btnDefault = document.getElementById('btnModeDefault');
       const btnPanel = document.getElementById('btnModePanel');
+
+      btnMap.classList.remove('active');
+      btnDefault.classList.remove('active');
+      btnPanel.classList.remove('active');
 
       sidebar.style.height = '';
       mapWrapper.style.height = '';
 
-      if (target === 'map') {
-        if (currentMode === 'full-map') {
-          currentMode = 'default';
-          body.classList.remove('mode-full-map', 'mode-full-panel');
-          btnMap.classList.remove('active');
-          btnPanel.classList.remove('active');
-        } else {
-          currentMode = 'full-map';
-          body.classList.remove('mode-full-panel');
-          body.classList.add('mode-full-map');
-          btnMap.classList.add('active');
-          btnPanel.classList.remove('active');
-        }
-      } else if (target === 'panel') {
-        if (currentMode === 'full-panel') {
-          currentMode = 'default';
-          body.classList.remove('mode-full-map', 'mode-full-panel');
-          btnMap.classList.remove('active');
-          btnPanel.classList.remove('active');
-        } else {
-          currentMode = 'full-panel';
-          body.classList.remove('mode-full-map');
-          body.classList.add('mode-full-panel');
-          btnPanel.classList.add('active');
-          btnMap.classList.remove('active');
-        }
+      if (mode === 'map') {
+        body.classList.remove('mode-full-panel');
+        body.classList.add('mode-full-map');
+        btnMap.classList.add('active');
+      } else if (mode === 'panel') {
+        body.classList.remove('mode-full-map');
+        body.classList.add('mode-full-panel');
+        btnPanel.classList.add('active');
+      } else {
+        // 預設模式（60:40 上地圖下邊欄）
+        body.classList.remove('mode-full-map', 'mode-full-panel');
+        btnDefault.classList.add('active');
       }
 
       setTimeout(() => map.invalidateSize(), 280);
@@ -821,8 +816,9 @@
         renderMap();
       }
 
-      if (currentMode === 'full-panel') {
-        toggleDirectView('panel');
+      // 若在全面板模式下點選，自動切回預設比例
+      if (document.body.classList.contains('mode-full-panel')) {
+        setAppViewMode('default');
       }
 
       map.setView([target.lat, target.lng], 16);
