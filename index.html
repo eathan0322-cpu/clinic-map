@@ -40,6 +40,7 @@
       user-select: none;
       align-items: center;
       justify-content: center;
+      background: #1e293b;
     }
     .sheet-drag-pill {
       width: 46px;
@@ -207,7 +208,7 @@
     .popup-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 8px; }
     .popup-btn { text-align: center; border: none; padding: 5px 3px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 3px; }
 
-    /* 手機版：地圖在上、面板在下 + 按住小橫槓無段自由拉動 */
+    /* 手機版：地圖在上、面板在下 + 頂部控制面板釘選不跑位 */
     @media (max-width: 768px) {
       body { flex-direction: column; }
       #map-wrapper { order: 1; width: 100%; height: 60%; flex: none; }
@@ -219,8 +220,14 @@
         box-shadow: 0 -4px 16px rgba(0,0,0,0.5); 
         padding: 0 16px 28px 16px; 
         border-radius: 16px 16px 0 0;
+        overflow-y: auto;
       }
-      .sheet-drag-area { display: flex; }
+      .sheet-drag-area { 
+        display: flex; 
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
       .global-view-toggle-btn { display: block; }
 
       body.mode-full-map #map-wrapper { height: 100% !important; }
@@ -243,7 +250,7 @@
   </div>
 
   <div id="sidebar">
-    <!-- 原生體驗：按住這條小橫槓即可上下自由拉動面板與地圖比例 -->
+    <!-- 面板頂端小橫槓 -->
     <div class="sheet-drag-area" id="sheetDragArea">
       <span class="sheet-drag-pill"></span>
     </div>
@@ -531,10 +538,9 @@
       }
     };
 
-    // 頁面載入後自動啟動定位監聽
     initUserLocation();
 
-    /* 手機端頂部膠囊小橫槓無段拖曳邏輯 */
+    /* 手機端頂部膠囊小橫槓無段拖曳邏輯（鎖死 scrollTop 保持頂部不捲動） */
     const dragArea = document.getElementById('sheetDragArea');
     const mapWrapper = document.getElementById('map-wrapper');
     const sidebar = document.getElementById('sidebar');
@@ -547,11 +553,14 @@
 
       sidebar.style.height = `${newSidebarH}px`;
       mapWrapper.style.height = `${newMapH}px`;
+      // 關鍵修復：拖曳過程中永遠將滾動條鎖定在 0，防止圖1的頂部被吃掉
+      sidebar.scrollTop = 0;
       map.invalidateSize();
     }
 
     dragArea.addEventListener('touchstart', (e) => {
       isDraggingPill = true;
+      sidebar.scrollTop = 0;
     }, { passive: true });
 
     window.addEventListener('touchmove', (e) => {
@@ -564,6 +573,7 @@
     window.addEventListener('touchend', () => {
       if (isDraggingPill) {
         isDraggingPill = false;
+        sidebar.scrollTop = 0;
         map.invalidateSize();
       }
     });
@@ -593,6 +603,7 @@
         btn.innerText = '🗺️ 全螢幕地圖';
       }
 
+      sidebar.scrollTop = 0;
       setTimeout(() => map.invalidateSize(), 300);
     };
 
