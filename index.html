@@ -79,23 +79,32 @@
       background: #38bdf8;
     }
 
-    /* 全域浮動切換按鈕 (手機版專用) */
-    .global-view-toggle-btn {
+    /* 二合一獨立切換膠囊按鈕 (手機版專用，常駐最頂層) */
+    .view-toggle-capsule {
       display: none;
       position: fixed;
       top: 12px;
       right: 12px;
       z-index: 9999;
       background: #0f172a;
-      color: #38bdf8;
       border: 1.5px solid #0284c7;
-      padding: 7px 12px;
-      border-radius: 8px;
-      font-size: 12px;
-      font-weight: bold;
+      border-radius: 20px;
+      overflow: hidden;
       box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+    }
+    .toggle-sub-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 6px 10px;
       cursor: pointer;
-      user-select: none;
+      transition: 0.2s;
+    }
+    .toggle-sub-btn.active {
+      background: #0284c7;
+      color: #ffffff;
     }
 
     /* 回到我的位置定位快捷鈕 */
@@ -234,10 +243,10 @@
     .popup-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 8px; }
     .popup-btn { text-align: center; border: none; padding: 5px 3px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 3px; }
 
-    /* 手機版：地圖在上(order:1)、面板在下(order:2) */
+    /* 手機版：上方地圖、下方雙層面板（頂層釘死絕對不捲動、下層專屬滾動） */
     @media (max-width: 768px) {
       body { flex-direction: column; }
-      #map-wrapper { order: 1; width: 100%; height: 60%; flex: none; }
+      #map-wrapper { order: 1; width: 100%; height: 60%; flex: none; transition: height 0.25s ease; }
       #sidebar { 
         order: 2; 
         width: 100%; 
@@ -247,9 +256,10 @@
         padding: 0; 
         border-radius: 16px 16px 0 0;
         overflow: hidden; 
+        transition: height 0.25s ease;
       }
       .sheet-drag-area { display: flex; }
-      .global-view-toggle-btn { display: block; }
+      .view-toggle-capsule { display: flex; }
       .sidebar-fixed-top { padding-top: 0; }
 
       body.mode-full-map #map-wrapper { height: 100% !important; }
@@ -262,8 +272,11 @@
 </head>
 <body>
 
-  <!-- 手機端全域浮動視圖切換鍵（常駐最頂層） -->
-  <button type="button" id="globalViewToggleBtn" class="global-view-toggle-btn" onclick="cycleMobileView()">🗺️ 全螢幕地圖</button>
+  <!-- 手機端二合一獨立直達切換膠囊鈕（常駐最頂層） -->
+  <div class="view-toggle-capsule" id="viewToggleCapsule">
+    <button type="button" class="toggle-sub-btn" id="btnModeMap" onclick="toggleDirectView('map')">🗺️ 地圖</button>
+    <button type="button" class="toggle-sub-btn" id="btnModePanel" onclick="toggleDirectView('panel')">📋 面板</button>
+  </div>
 
   <!-- 桌機版排在最前面 = 顯示在左側 -->
   <div id="sidebar">
@@ -358,7 +371,7 @@
         <div class="progress-bar" id="progressBar" title="點擊進度條可依比例快速篩選陌開階段"></div>
       </div>
 
-      <div class="form-header">
+      <div class="form-header" id="formHeaderAnchor">
         <h2 id="formTitle">⚔️ 建立與維護目標</h2>
         <button type="button" id="cancelEditBtn" class="cancel-edit-btn" onclick="resetFormToCreate()">取消編輯</button>
       </div>
@@ -604,32 +617,46 @@
       }
     });
 
-    /* 方案 C：快速切換視圖狀態 (預設 -> 全螢幕地圖 100% -> 全螢幕面板 100%) */
-    let currentViewMode = 'default';
-    window.cycleMobileView = function() {
+    /* 二合一獨立直達切換邏輯 */
+    let currentMode = 'default';
+    window.toggleDirectView = function(target) {
       const body = document.body;
-      const btn = document.getElementById('globalViewToggleBtn');
+      const btnMap = document.getElementById('btnModeMap');
+      const btnPanel = document.getElementById('btnModePanel');
 
       sidebar.style.height = '';
       mapWrapper.style.height = '';
 
-      if (currentViewMode === 'default') {
-        currentViewMode = 'full-map';
-        body.classList.remove('mode-full-panel');
-        body.classList.add('mode-full-map');
-        btn.innerText = '📋 全螢幕面板';
-      } else if (currentViewMode === 'full-map') {
-        currentViewMode = 'full-panel';
-        body.classList.remove('mode-full-map');
-        body.classList.add('mode-full-panel');
-        btn.innerText = '⚖️ 比例還原';
-      } else {
-        currentViewMode = 'default';
-        body.classList.remove('mode-full-map', 'mode-full-panel');
-        btn.innerText = '🗺️ 全螢幕地圖';
+      if (target === 'map') {
+        if (currentMode === 'full-map') {
+          // 再次點擊已啟動的項目 -> 還原預設
+          currentMode = 'default';
+          body.classList.remove('mode-full-map', 'mode-full-panel');
+          btnMap.classList.remove('active');
+          btnPanel.classList.remove('active');
+        } else {
+          currentMode = 'full-map';
+          body.classList.remove('mode-full-panel');
+          body.classList.add('mode-full-map');
+          btnMap.classList.add('active');
+          btnPanel.classList.remove('active');
+        }
+      } else if (target === 'panel') {
+        if (currentMode === 'full-panel') {
+          currentMode = 'default';
+          body.classList.remove('mode-full-map', 'mode-full-panel');
+          btnMap.classList.remove('active');
+          btnPanel.classList.remove('active');
+        } else {
+          currentMode = 'full-panel';
+          body.classList.remove('mode-full-map');
+          body.classList.add('mode-full-panel');
+          btnPanel.classList.add('active');
+          btnMap.classList.remove('active');
+        }
       }
 
-      setTimeout(() => map.invalidateSize(), 300);
+      setTimeout(() => map.invalidateSize(), 280);
     };
 
     clinicsRef.on('value', (snapshot) => {
@@ -795,8 +822,9 @@
         renderMap();
       }
 
-      if (currentViewMode === 'full-panel') {
-        cycleMobileView();
+      // 若在全面板模式下點選，自動還原比例以利檢視地圖標記
+      if (currentMode === 'full-panel') {
+        toggleDirectView('panel');
       }
 
       map.setView([target.lat, target.lng], 16);
@@ -1068,6 +1096,7 @@
       pptx.writeFile({ fileName: `新北北基醫美拓展戰報_${scopeTag}_${todayTag}.pptx` });
     };
 
+    /* 點擊編輯情報：面板自動升起至 80% 高度並聚焦表單 */
     window.startEditClinic = function(id) {
       const target = clinics.find(c => c.id === id);
       if (!target) return;
@@ -1091,9 +1120,25 @@
       submitBtn.innerText = '💾 儲存並同步至雲端';
       submitBtn.classList.add('btn-update');
 
-      document.getElementById('sidebarScrollBody').scrollTop = 160;
+      map.closePopup();
+
+      // 手機端：自動升起面板至 80% 高度以利專心編輯
+      if (window.innerWidth <= 768) {
+        const totalH = window.innerHeight;
+        sidebar.style.height = `${totalH * 0.8}px`;
+        mapWrapper.style.height = `${totalH * 0.2}px`;
+        map.invalidateSize();
+      }
+
+      // 自動將下方內容區捲動至表單位置
+      const scrollBody = document.getElementById('sidebarScrollBody');
+      const headerAnchor = document.getElementById('formHeaderAnchor');
+      if (scrollBody && headerAnchor) {
+        scrollBody.scrollTop = headerAnchor.offsetTop - 10;
+      }
     };
 
+    /* 取消編輯或儲存完成：自動降回預設比例 */
     window.resetFormToCreate = function() {
       document.getElementById('editingId').value = '';
       document.getElementById('lastVisitDate').value = '';
@@ -1105,6 +1150,13 @@
       const submitBtn = document.getElementById('submitBtn');
       submitBtn.innerText = '定位並同步至雲端';
       submitBtn.classList.remove('btn-update');
+
+      // 手機端恢復原比例
+      if (window.innerWidth <= 768) {
+        sidebar.style.height = '';
+        mapWrapper.style.height = '';
+        map.invalidateSize();
+      }
     };
 
     async function smartGeocode(name, rawAddress, detectedDistrict) {
