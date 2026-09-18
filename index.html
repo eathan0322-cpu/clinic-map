@@ -30,7 +30,29 @@
     #map-wrapper { flex: 1; height: 100%; position: relative; }
     #map { width: 100%; height: 100%; }
 
-    /* 全域浮動切換按鈕 (手機版專用，永遠常駐在最頂層) */
+    /* 面板頂部拖曳小橫槓 (手機版專用) */
+    .sheet-drag-area {
+      display: none;
+      width: 100%;
+      padding: 10px 0 12px 0;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .sheet-drag-pill {
+      width: 46px;
+      height: 5px;
+      background: #64748b;
+      border-radius: 3px;
+      transition: background 0.2s;
+    }
+    .sheet-drag-area:active .sheet-drag-pill {
+      background: #38bdf8;
+    }
+
+    /* 全域浮動切換按鈕 (手機版專用) */
     .global-view-toggle-btn {
       display: none;
       position: fixed;
@@ -128,26 +150,33 @@
     .popup-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 8px; }
     .popup-btn { text-align: center; border: none; padding: 5px 3px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 3px; }
 
-    /* 手機版：地圖在上(65%)、面板在下(35%) + 快速全螢幕切換 */
+    /* 手機版：地圖在上、面板在下 + 按住小橫槓無段自由拉動 */
     @media (max-width: 768px) {
       body { flex-direction: column; }
-      #map-wrapper { order: 1; width: 100%; height: 65%; flex: none; transition: height 0.25s ease; }
-      #sidebar { order: 2; width: 100%; height: 35%; flex: none; box-shadow: 0 -2px 10px rgba(0,0,0,0.4); padding: 14px 16px 24px 16px; transition: height 0.25s ease; }
+      #map-wrapper { order: 1; width: 100%; height: 60%; flex: none; }
+      #sidebar { 
+        order: 2; 
+        width: 100%; 
+        height: 40%; 
+        flex: none; 
+        box-shadow: 0 -4px 16px rgba(0,0,0,0.5); 
+        padding: 0 16px 28px 16px; 
+        border-radius: 16px 16px 0 0;
+      }
+      .sheet-drag-area { display: flex; }
       .global-view-toggle-btn { display: block; }
 
-      /* 全螢幕地圖狀態 */
-      body.mode-full-map #map-wrapper { height: 100%; }
-      body.mode-full-map #sidebar { height: 0%; padding: 0; overflow: hidden; display: none; }
+      body.mode-full-map #map-wrapper { height: 100% !important; }
+      body.mode-full-map #sidebar { height: 0% !important; padding: 0 !important; overflow: hidden !important; display: none !important; }
 
-      /* 全螢幕面板狀態 */
-      body.mode-full-panel #map-wrapper { height: 0%; display: none; }
-      body.mode-full-panel #sidebar { height: 100%; display: block; }
+      body.mode-full-panel #map-wrapper { height: 0% !important; display: none !important; }
+      body.mode-full-panel #sidebar { height: 100% !important; display: block !important; }
     }
   </style>
 </head>
 <body>
 
-  <!-- 手機端全域浮動視圖切換鍵（常駐最頂層，隨時可按） -->
+  <!-- 手機端全域浮動視圖切換鍵（常駐最頂層） -->
   <button type="button" id="globalViewToggleBtn" class="global-view-toggle-btn" onclick="cycleMobileView()">🗺️ 全螢幕地圖</button>
 
   <div id="map-wrapper">
@@ -155,6 +184,11 @@
   </div>
 
   <div id="sidebar">
+    <!-- 原生體驗：按住這條小橫槓即可上下自由拉動面板與地圖比例 -->
+    <div class="sheet-drag-area" id="sheetDragArea">
+      <span class="sheet-drag-pill"></span>
+    </div>
+
     <div class="control-panel">
       <div class="search-box">
         <span class="search-icon">🔍</span>
@@ -381,11 +415,49 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    /* 方案 C：快速切換視圖狀態 (預設 65:35 -> 全螢幕地圖 100% -> 全螢幕面板 100%) */
+    /* 手機端頂部膠囊小橫槓無段拖曳邏輯 */
+    const dragArea = document.getElementById('sheetDragArea');
+    const mapWrapper = document.getElementById('map-wrapper');
+    const sidebar = document.getElementById('sidebar');
+    let isDraggingPill = false;
+
+    function updateSheetHeight(clientY) {
+      const windowH = window.innerHeight;
+      // 限制面板高度在 15% 到 85% 之間
+      let newSidebarH = Math.max(windowH * 0.15, Math.min(windowH * 0.85, windowH - clientY));
+      let newMapH = windowH - newSidebarH;
+
+      sidebar.style.height = `${newSidebarH}px`;
+      mapWrapper.style.height = `${newMapH}px`;
+      map.invalidateSize();
+    }
+
+    dragArea.addEventListener('touchstart', (e) => {
+      isDraggingPill = true;
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+      if (!isDraggingPill) return;
+      if (e.touches && e.touches[0]) {
+        updateSheetHeight(e.touches[0].clientY);
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchend', () => {
+      if (isDraggingPill) {
+        isDraggingPill = false;
+        map.invalidateSize();
+      }
+    });
+
+    /* 方案 C：快速切換視圖狀態 (預設 -> 全螢幕地圖 100% -> 全螢幕面板 100%) */
     let currentViewMode = 'default';
     window.cycleMobileView = function() {
       const body = document.body;
       const btn = document.getElementById('globalViewToggleBtn');
+
+      sidebar.style.height = '';
+      mapWrapper.style.height = '';
 
       if (currentViewMode === 'default') {
         currentViewMode = 'full-map';
@@ -696,7 +768,6 @@
       updateStats(filtered);
     }
 
-    // 彈窗內手動解鎖拖曳開關
     window.enableMarkerDrag = function(id) {
       map.closePopup();
       const targetMarker = markers.find(m => m.clinicId === id);
