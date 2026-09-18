@@ -2,8 +2,8 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>新北基醫美戰情室 - 雙軌業務與即時搜尋版</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>雙北基醫美戰情室 - 雙軌業務與即時搜尋版</title>
   
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
@@ -26,9 +26,12 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
     body { display: flex; height: 100vh; overflow: hidden; background: #0f172a; color: #f8fafc; }
-    #sidebar { width: 420px; height: 100%; overflow-y: auto; background: #1e293b; padding: 18px; box-shadow: 2px 0 10px rgba(0,0,0,0.5); z-index: 1000; flex-shrink: 0; }
+    #sidebar { width: 420px; height: 100%; overflow-y: auto; background: #1e293b; padding: 18px; box-shadow: 2px 0 10px rgba(0,0,0,0.5); z-index: 1000; flex-shrink: 0; transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
     #map { flex: 1; height: 100%; }
     
+    .sheet-handle { display: none; width: 100%; padding: 8px 0; align-items: center; justify-content: center; cursor: pointer; }
+    .sheet-bar { width: 40px; height: 4px; background: #64748b; border-radius: 2px; }
+
     .control-panel { background: #0f172a; padding: 14px; border-radius: 12px; margin-bottom: 14px; border: 1px solid #334155; }
     .search-box { position: relative; margin-bottom: 10px; }
     .search-input { width: 100%; padding: 9px 12px 9px 32px; background: #1e293b; border: 1px solid #475569; border-radius: 6px; color: white; font-size: 13px; }
@@ -44,9 +47,6 @@
     .btn-export-excel:hover { background: #065f46; }
     .btn-export-ppt { padding: 8px; background: #b45309; color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
     .btn-export-ppt:hover { background: #92400e; }
-
-    .btn-import-linkou { width: 100%; margin-top: 8px; padding: 8px; background: #0d9488; color: white; border: 1px solid #14b8a6; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-    .btn-import-linkou:hover { background: #0f766e; }
 
     #reminderPanel { background: #0f172a; border: 1px solid #0284c7; border-radius: 12px; padding: 12px; margin-bottom: 14px; display: none; }
     .reminder-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
@@ -111,16 +111,36 @@
     .popup-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 8px; }
     .popup-btn { text-align: center; border: none; padding: 5px 3px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 3px; }
 
+    /* 手機端 Google Maps 抽屜式 (Bottom Sheet) 比例體驗 */
     @media (max-width: 768px) {
-      body { flex-direction: column-reverse; }
-      #sidebar { width: 100%; height: 50vh; }
-      #map { height: 50vh; }
+      body { position: relative; }
+      #map { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
+      #sidebar { 
+        position: absolute; 
+        bottom: 0; 
+        left: 0; 
+        width: 100%; 
+        height: 82vh; 
+        transform: translateY(calc(82vh - 24vh)); 
+        z-index: 1000; 
+        border-radius: 18px 18px 0 0; 
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.6); 
+        padding: 6px 16px 24px 16px;
+      }
+      #sidebar.sheet-expanded {
+        transform: translateY(0);
+      }
+      .sheet-handle { display: flex; }
     }
   </style>
 </head>
 <body>
 
   <div id="sidebar">
+    <div class="sheet-handle" onclick="toggleMobileSheet()">
+      <span class="sheet-bar"></span>
+    </div>
+
     <div class="control-panel">
       <div class="search-box">
         <span class="search-icon">🔍</span>
@@ -180,9 +200,6 @@
         <button type="button" class="btn-export-excel" onclick="exportToExcel()">📊 匯出 Excel (.xlsx)</button>
         <button type="button" class="btn-export-ppt" onclick="exportToPPT()">📑 匯出簡報 (.pptx)</button>
       </div>
-
-      <!-- 一鍵匯入林口名單按鈕 -->
-      <button type="button" id="importLinkouBtn" class="btn-import-linkou" onclick="importLinkouClinics()">📥 一鍵匯入林口區完整診所名單 (16家)</button>
     </div>
 
     <!-- 智慧複訪提醒看板（7天內即將到期/逾期） -->
@@ -298,26 +315,6 @@
     const db = firebase.database();
     const clinicsRef = db.ref('clinics');
 
-    // 林口區完整 16 家醫美診所精確座標與名冊
-    const linkouPresets = [
-      { id: "lk_01", district: "林口區", clientType: "prospect", name: "星醫美學院 / 星和診所 (林口)", address: "新北市林口區文化二路一段390號之1", lat: 25.07685, lng: 121.36985, status: "red", equipment: "評估中", notes: "星醫美學連鎖院所，高階光電微整量大" },
-      { id: "lk_02", district: "林口區", clientType: "prospect", name: "彤顏診所 (林口皮膚專科/醫美)", address: "新北市林口區文化二路一段170號", lat: 25.07125, lng: 121.36545, status: "red", equipment: "評估中", notes: "專科大院，皮秒、電波、微整自費客源充足" },
-      { id: "lk_03", district: "林口區", clientType: "prospect", name: "琢原美學診所", address: "新北市林口區文化三路一段461號", lat: 25.07925, lng: 121.37315, status: "red", equipment: "評估中", notes: "高質感自費抗老微整、複合光療" },
-      { id: "lk_04", district: "林口區", clientType: "prospect", name: "未來之丘美學診所", address: "新北市林口區四維路52-1號2樓", lat: 25.08315, lng: 121.38145, status: "red", equipment: "評估中", notes: "預約制高端美學診所，高單價客層" },
-      { id: "lk_05", district: "林口區", clientType: "prospect", name: "陽光皮膚科診所", address: "新北市林口區仁愛路二段113號", lat: 25.07845, lng: 121.37895, status: "red", equipment: "評估中", notes: "在地專科，健保兼具高比例自費雷射" },
-      { id: "lk_06", district: "林口區", clientType: "prospect", name: "馥妍流美學診所", address: "新北市林口區中正路37號", lat: 25.08055, lng: 121.39125, status: "red", equipment: "評估中", notes: "林口舊街自費醫美，非侵入式緊緻拉提" },
-      { id: "lk_07", district: "林口區", clientType: "prospect", name: "樂瑅診所", address: "新北市林口區文化三路一段77號2樓", lat: 25.06895, lng: 121.36385, status: "red", equipment: "評估中", notes: "三井Outlet周邊，自費微整、抗老拉提" },
-      { id: "lk_08", district: "林口區", clientType: "prospect", name: "文林皮膚科診所", address: "新北市林口區文化一路一段115號", lat: 25.07285, lng: 121.37215, status: "red", equipment: "評估中", notes: "文化一路專科診所，換膚除斑及微整" },
-      { id: "lk_09", district: "林口區", clientType: "prospect", name: "何文藻皮膚科診所 (林口院區)", address: "新北市林口區文化二路一段276號", lat: 25.07425, lng: 121.36785, status: "red", equipment: "評估中", notes: "連鎖專科名醫大院，門診人流大，光療需穩定" },
-      { id: "lk_10", district: "林口區", clientType: "prospect", name: "林口光澤診所", address: "新北市林口區文化二路一段238號", lat: 25.07315, lng: 121.36695, status: "red", equipment: "評估中", notes: "光澤體系林口據點，電音波拉提與複合光電主力" },
-      { id: "lk_11", district: "林口區", clientType: "prospect", name: "晶緻美學診所 (林口院區)", address: "新北市林口區文化二路一段308號", lat: 25.07515, lng: 121.36855, status: "red", equipment: "評估中", notes: "自費微整、輪廓雕塑與體雕抗老" },
-      { id: "lk_12", district: "林口區", clientType: "prospect", name: "佳醫美人診所 (林口院區)", address: "新北市林口區文化三路一段39巷295號", lat: 25.06745, lng: 121.36215, status: "red", equipment: "評估中", notes: "佳醫集團連鎖體系，熟齡抗老與高階光電" },
-      { id: "lk_13", district: "林口區", clientType: "prospect", name: "維格皮膚科診所 (林口分院)", address: "新北市林口區文化二路一段216號", lat: 25.07255, lng: 121.36645, status: "red", equipment: "評估中", notes: "維格連鎖據點，耗材週轉率高，原廠機台需求強" },
-      { id: "lk_14", district: "林口區", clientType: "prospect", name: "禾馨美學診所 (林口院區)", address: "新北市林口區文化二路一段388-1號", lat: 25.07655, lng: 121.36955, status: "red", equipment: "評估中", notes: "禾馨體系美學旗艦，產後體雕減脂、私密處與拉提" },
-      { id: "lk_15", district: "林口區", clientType: "prospect", name: "林口長庚美容醫學中心", address: "桃園市龜山區復興街5號 (林口長庚商圈)", lat: 25.06125, lng: 121.36915, status: "red", equipment: "評估中", notes: "長庚體系醫美中心，光電與整外兼備" },
-      { id: "lk_16", district: "林口區", clientType: "prospect", name: "美麗境界醫美診所 (林口院區)", address: "新北市林口區文化二路一段356號", lat: 25.07585, lng: 121.36915, status: "red", equipment: "評估中", notes: "文化二路醫美聚落，微整注射與原廠雷射" }
-    ];
-
     const districtCoords = {
       'ALL': { center: [25.065, 121.555], zoom: 11 },
       '板橋區': { center: [25.0135, 121.4645], zoom: 14 },
@@ -372,6 +369,19 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
+    // 手機抽屜開關切換
+    window.toggleMobileSheet = function(forceExpand) {
+      const sidebar = document.getElementById('sidebar');
+      if (forceExpand === true) {
+        sidebar.classList.add('sheet-expanded');
+      } else if (forceExpand === false) {
+        sidebar.classList.remove('sheet-expanded');
+      } else {
+        sidebar.classList.toggle('sheet-expanded');
+      }
+      setTimeout(() => map.invalidateSize(), 300);
+    };
+
     clinicsRef.on('value', (snapshot) => {
       const data = snapshot.val();
       if (!data) {
@@ -392,40 +402,6 @@
       checkFollowUpReminders();
       document.getElementById('syncStatus').innerText = '🟢 雲端同步完成';
     });
-
-    // 安全寫入林口 16 家名單（已有資料的點位不覆蓋自訂備忘）
-    window.importLinkouClinics = async function() {
-      const btn = document.getElementById('importLinkouBtn');
-      btn.innerText = '正在寫入林口區 16 家診所...';
-      btn.disabled = true;
-
-      const snapshot = await clinicsRef.once('value');
-      const data = snapshot.val() || {};
-      const updates = {};
-      let addCount = 0;
-
-      linkouPresets.forEach(c => {
-        if (!data[c.id]) {
-          updates[c.id] = c;
-          addCount++;
-        }
-      });
-
-      if (Object.keys(updates).length > 0) {
-        await clinicsRef.update(updates);
-      }
-
-      document.getElementById('districtFilter').value = '林口區';
-      applyFilters(true);
-
-      btn.innerText = `✅ 林口區 ${linkouPresets.length} 家診所已全部歸位！`;
-      btn.style.background = '#059669';
-      btn.style.borderColor = '#34d399';
-
-      setTimeout(() => {
-        btn.style.display = 'none';
-      }, 2500);
-    };
 
     function detectDistrict(addr) {
       if (addr.includes('基隆')) return '基隆市';
@@ -571,10 +547,7 @@
 
       map.setView([target.lat, target.lng], 16);
       setTimeout(() => {
-        const marker = markers.find(m => {
-          const latLng = m.getLatLng();
-          return Math.abs(latLng.lat - target.lat) < 0.0001 && Math.abs(latLng.lng - target.lng) < 0.0001;
-        });
+        const marker = markers.find(m => m.clinicId === id);
         if (marker) marker.openPopup();
       }, 100);
     };
@@ -619,13 +592,14 @@
                 border-radius: 50%;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.5), 0 0 10px rgba(234, 179, 8, 0.45);
                 display: flex; align-items: center; justify-content: center;
-                font-size: 13px; line-height: 1; color: #facc15; cursor: grab;
+                font-size: 13px; line-height: 1; color: #facc15;
               ">⭐</div>
             `,
             iconSize: [26, 26],
             iconAnchor: [13, 13]
           });
-          marker = L.marker([item.lat, item.lng], { icon: vipIcon, draggable: true }).addTo(map);
+          // 預設強制鎖定 draggable: false
+          marker = L.marker([item.lat, item.lng], { icon: vipIcon, draggable: false }).addTo(map);
         } else {
           const pIcon = L.divIcon({
             className: 'prospect-marker-wrap',
@@ -636,21 +610,25 @@
                 border: 2px solid #ffffff;
                 border-radius: 50%;
                 box-shadow: 0 2px 6px rgba(0,0,0,0.35);
-                cursor: grab;
               "></div>
             `,
             iconSize: [20, 20],
             iconAnchor: [10, 10]
           });
-          marker = L.marker([item.lat, item.lng], { icon: pIcon, draggable: true }).addTo(map);
+          // 預設強制鎖定 draggable: false
+          marker = L.marker([item.lat, item.lng], { icon: pIcon, draggable: false }).addTo(map);
         }
 
+        marker.clinicId = item.id;
+
+        // 拖曳放開後更新 Firebase 並立即重新上鎖
         marker.on('dragend', function(e) {
           const newPos = e.target.getLatLng();
           clinicsRef.child(item.id).update({
             lat: newPos.lat,
             lng: newPos.lng
           });
+          if (marker.dragging) marker.dragging.disable();
         });
 
         const badgeClass = isExisting ? 'badge-existing' : 'badge-prospect';
@@ -679,9 +657,10 @@
             
             <div class="popup-btn-row">
               <button class="popup-btn" onclick="startEditClinic('${item.id}')" style="background:#2563eb; color:white;">✏️ 編輯情報</button>
+              <button class="popup-btn" onclick="enableMarkerDrag('${item.id}')" style="background:#0891b2; color:white;">📍 微調位置</button>
               <a class="popup-btn" href="${gmapSearchUrl}" target="_blank" style="background:#475569; color:white;">🔍 Google 查核</a>
               <a class="popup-btn" href="${gmapNavUrl}" target="_blank" style="background:#0284c7; color:white;">🚗 店家導航</a>
-              <button class="popup-btn" onclick="deleteClinic('${item.id}')" style="background:#ef4444; color:white;">🗑️ 刪除標記</button>
+              <button class="popup-btn" onclick="deleteClinic('${item.id}')" style="background:#ef4444; color:white; grid-column: span 2;">🗑️ 刪除標記</button>
             </div>
           </div>
         `;
@@ -691,6 +670,16 @@
 
       updateStats(filtered);
     }
+
+    // 方案 A：彈窗內手動解鎖拖曳開關
+    window.enableMarkerDrag = function(id) {
+      map.closePopup();
+      const targetMarker = markers.find(m => m.clinicId === id);
+      if (targetMarker && targetMarker.dragging) {
+        targetMarker.dragging.enable();
+        alert('📍 已解鎖此診所位置！\n請直接拖曳它到正確位置，放開手指即自動固定儲存並重新鎖定。');
+      }
+    };
 
     function updateStats(filteredList) {
       const scopeName = currentDistrict === 'ALL' ? '全責任區' : currentDistrict;
@@ -852,6 +841,8 @@
       submitBtn.innerText = '💾 儲存並同步至雲端';
       submitBtn.classList.add('btn-update');
 
+      // 手機端編輯時自動拉起抽屜
+      toggleMobileSheet(true);
       document.getElementById('sidebar').scrollTop = 160;
     };
 
@@ -943,6 +934,7 @@
           await clinicsRef.child(editingId).set(updatedClinic);
           map.closePopup();
           resetFormToCreate();
+          toggleMobileSheet(false); // 儲存後手機抽屜自動推回大地圖
         }
         return;
       }
@@ -979,6 +971,7 @@
 
           map.setView([coords.lat, coords.lng], 16);
           e.target.reset();
+          toggleMobileSheet(false); // 新增完成後手機抽屜自動推回大地圖
         } else {
           alert('找不到這個地址，請確認路名與門牌填寫是否正確！');
         }
