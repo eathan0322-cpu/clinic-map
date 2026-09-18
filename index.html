@@ -30,21 +30,21 @@
     #map-wrapper { flex: 1; height: 100%; position: relative; }
     #map { width: 100%; height: 100%; }
 
-    /* 全螢幕快速切換按鈕 (手機版專用) */
-    .view-toggle-btn {
+    /* 全域浮動切換按鈕 (手機版專用，永遠常駐在最頂層) */
+    .global-view-toggle-btn {
       display: none;
-      position: absolute;
+      position: fixed;
       top: 12px;
       right: 12px;
-      z-index: 1100;
+      z-index: 9999;
       background: #0f172a;
       color: #38bdf8;
       border: 1.5px solid #0284c7;
-      padding: 6px 10px;
+      padding: 7px 12px;
       border-radius: 8px;
       font-size: 12px;
       font-weight: bold;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.6);
       cursor: pointer;
       user-select: none;
     }
@@ -128,12 +128,12 @@
     .popup-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 8px; }
     .popup-btn { text-align: center; border: none; padding: 5px 3px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 3px; }
 
-    /* 方案 C：手機版 65% : 35% 比例 + 快速全螢幕切換 */
+    /* 手機版：地圖在上(65%)、面板在下(35%) + 快速全螢幕切換 */
     @media (max-width: 768px) {
       body { flex-direction: column; }
-      #map-wrapper { width: 100%; height: 65%; flex: none; transition: height 0.25s ease; }
-      #sidebar { width: 100%; height: 35%; flex: none; box-shadow: 0 -2px 10px rgba(0,0,0,0.4); padding: 14px 16px 24px 16px; transition: height 0.25s ease; }
-      .view-toggle-btn { display: block; }
+      #map-wrapper { order: 1; width: 100%; height: 65%; flex: none; transition: height 0.25s ease; }
+      #sidebar { order: 2; width: 100%; height: 35%; flex: none; box-shadow: 0 -2px 10px rgba(0,0,0,0.4); padding: 14px 16px 24px 16px; transition: height 0.25s ease; }
+      .global-view-toggle-btn { display: block; }
 
       /* 全螢幕地圖狀態 */
       body.mode-full-map #map-wrapper { height: 100%; }
@@ -146,6 +146,13 @@
   </style>
 </head>
 <body>
+
+  <!-- 手機端全域浮動視圖切換鍵（常駐最頂層，隨時可按） -->
+  <button type="button" id="globalViewToggleBtn" class="global-view-toggle-btn" onclick="cycleMobileView()">🗺️ 全螢幕地圖</button>
+
+  <div id="map-wrapper">
+    <div id="map"></div>
+  </div>
 
   <div id="sidebar">
     <div class="control-panel">
@@ -305,12 +312,6 @@
     </div>
   </div>
 
-  <div id="map-wrapper">
-    <!-- 手機端全螢幕視圖切換鍵 -->
-    <button type="button" id="viewToggleBtn" class="view-toggle-btn" onclick="cycleMobileView()">🗺️ 全螢幕地圖</button>
-    <div id="map"></div>
-  </div>
-
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyAuYp6stsPabpFZKJsHnCEAlmyM8LAgC_Q",
@@ -384,7 +385,7 @@
     let currentViewMode = 'default';
     window.cycleMobileView = function() {
       const body = document.body;
-      const btn = document.getElementById('viewToggleBtn');
+      const btn = document.getElementById('globalViewToggleBtn');
 
       if (currentViewMode === 'default') {
         currentViewMode = 'full-map';
@@ -568,7 +569,6 @@
         renderMap();
       }
 
-      // 若在全面板模式下點選，自動切回大地圖以查看標記
       if (currentViewMode === 'full-panel') {
         cycleMobileView();
       }
