@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -976,6 +975,7 @@
       XLSX.writeFile(workbook, `醫美業務戰情報表_${scopeTag}_${dateTag}.xlsx`);
     };
 
+    /* 戰情分析簡報生成核心 (圓餅圖、橫向長條圖與重點攻堅清單) */
     window.exportToPPT = function() {
       const list = getFilteredClinics();
       if (list.length === 0) {
@@ -989,71 +989,184 @@
       const scopeTag = currentDistrict === 'ALL' ? '全責任區' : currentDistrict;
       const todayTag = new Date().toISOString().slice(0, 10);
 
+      // ===== Slide 1: 封面 =====
       const cover = pptx.addSlide();
       cover.background = { color: "0F172A" };
-      cover.addText("新北北基醫美拓展戰報", {
-        x: 1.0, y: 2.0, w: 8.5, h: 1.2,
-        fontSize: 36, bold: true, color: "38BDF8"
+      cover.addText("新北北基醫美拓展戰情分析報告", {
+        x: 1.0, y: 1.8, w: 11.3, h: 1.2,
+        fontSize: 34, bold: true, color: "38BDF8"
       });
-      cover.addText(`責任目標轄區：${scopeTag}  |  產出日期：${todayTag}\n當前管線顯示診所總數：${list.length} 家`, {
-        x: 1.0, y: 3.4, w: 8.5, h: 1.0,
-        fontSize: 18, color: "CBD5E1"
+      cover.addText(`責任目標轄區：${scopeTag}   |   產出日期：${todayTag}\n當前管線診所總數：${list.length} 家`, {
+        x: 1.0, y: 3.2, w: 11.3, h: 1.0,
+        fontSize: 18, color: "94A3B8"
       });
 
-      for (let i = 0; i < list.length; i += 2) {
-        const slide = pptx.addSlide();
-        slide.background = { color: "1E293B" };
-        
-        slide.addText(`業務探勘戰情卡片 - ${scopeTag} (${i + 1}~${Math.min(i + 2, list.length)} / 共 ${list.length} 家)`, {
-          x: 0.8, y: 0.4, w: 8.5, h: 0.5,
-          fontSize: 14, color: "94A3B8", bold: true
+      // ===== 數據統計計算 =====
+      const clientTypeCounts = { existing: 0, prospect: 0 };
+      const statusCounts = { red: 0, yellow: 0, orange: 0, green: 0, purple: 0, gray: 0 };
+      const districtCounts = {};
+
+      list.forEach(c => {
+        if (c.clientType === 'existing') {
+          clientTypeCounts.existing++;
+        } else {
+          clientTypeCounts.prospect++;
+          const st = c.status || 'red';
+          statusCounts[st] = (statusCounts[st] || 0) + 1;
+        }
+
+        const d = c.district || '其他';
+        districtCounts[d] = (districtCounts[d] || 0) + 1;
+      });
+
+      // ===== Slide 2: 客群維度與陌開漏斗圓餅分析 =====
+      const slide2 = pptx.addSlide();
+      slide2.background = { color: "1E293B" };
+      slide2.addText(`戰情維度剖析 - 客戶結構與推進管線 (${scopeTag})`, {
+        x: 0.8, y: 0.4, w: 11.5, h: 0.5,
+        fontSize: 20, bold: true, color: "F8FAFC"
+      });
+
+      // 左圖：客群維度圓餅圖
+      const clientTypeLabels = ["⭐ 既有客戶", "🎯 陌開客戶"];
+      const clientTypeValues = [clientTypeCounts.existing, clientTypeCounts.prospect];
+      const clientTypeColors = ["EAB308", "0284C7"];
+
+      slide2.addText("【客群結構比例】", { x: 0.8, y: 1.1, w: 5.4, h: 0.4, fontSize: 14, bold: true, color: "38BDF8" });
+      slide2.addChart(pptx.ChartType.pie, [
+        {
+          name: "客群結構",
+          labels: clientTypeLabels,
+          values: clientTypeValues
+        }
+      ], {
+        x: 0.8, y: 1.6, w: 5.4, h: 4.8,
+        chartColors: clientTypeColors,
+        showLegend: true,
+        legendPos: 'b',
+        showPercent: true,
+        dataLabelColor: 'FFFFFF'
+      });
+
+      // 右圖：陌開階段圓餅/環形圖
+      const statusLabels = ["🔴 未探勘", "🟡 初訪摸底", "🟠 鎖定窗口", "🟢 評估試機", "🟣 合作結案", "⚪ 暫緩擱置"];
+      const statusValues = [
+        statusCounts.red, statusCounts.yellow, statusCounts.orange,
+        statusCounts.green, statusCounts.purple, statusCounts.gray
+      ];
+      const statusColors = ["EF4444", "EAB308", "F97316", "22C55E", "A855F7", "64748B"];
+
+      slide2.addText("【陌開推進階段分佈】", { x: 6.8, y: 1.1, w: 5.4, h: 0.4, fontSize: 14, bold: true, color: "38BDF8" });
+      slide2.addChart(pptx.ChartType.doughnut, [
+        {
+          name: "推進階段",
+          labels: statusLabels,
+          values: statusValues
+        }
+      ], {
+        x: 6.8, y: 1.6, w: 5.4, h: 4.8,
+        chartColors: statusColors,
+        showLegend: true,
+        legendPos: 'b',
+        showPercent: true,
+        dataLabelColor: 'FFFFFF'
+      });
+
+      // ===== Slide 3: 各轄區戰力佈局長條圖 =====
+      const slide3 = pptx.addSlide();
+      slide3.background = { color: "1E293B" };
+      slide3.addText(`責任行政區分佈統計 - 密度與戰力涵蓋`, {
+        x: 0.8, y: 0.4, w: 11.5, h: 0.5,
+        fontSize: 20, bold: true, color: "F8FAFC"
+      });
+
+      const sortedDistricts = Object.keys(districtCounts).sort((a, b) => districtCounts[b] - districtCounts[a]);
+      const barLabels = sortedDistricts.slice(0, 10);
+      const barValues = barLabels.map(d => districtCounts[d]);
+
+      slide3.addChart(pptx.ChartType.bar, [
+        {
+          name: "診所總數",
+          labels: barLabels,
+          values: barValues
+        }
+      ], {
+        x: 1.0, y: 1.2, w: 11.0, h: 5.3,
+        barDir: 'col',
+        chartColors: ["0284C7"],
+        showValue: true,
+        dataLabelColor: 'FFFFFF',
+        catAxisLabelColor: 'CBD5E1',
+        valAxisLabelColor: 'CBD5E1',
+        showLegend: false
+      });
+
+      // ===== Slide 4: 重點攻堅與 7 天複訪行動清單 =====
+      const slide4 = pptx.addSlide();
+      slide4.background = { color: "1E293B" };
+      slide4.addText(`重點攻堅目標與近 7 天複訪行動清單`, {
+        x: 0.8, y: 0.4, w: 11.5, h: 0.5,
+        fontSize: 20, bold: true, color: "F8FAFC"
+      });
+
+      const todayObj = new Date();
+      todayObj.setHours(0, 0, 0, 0);
+
+      // 優先挑選：7天內需複訪、或處於試機/鎖定窗口的關鍵診所
+      const priorityList = list.filter(c => {
+        const isHotStage = (c.status === 'green' || c.status === 'orange');
+        let isSoonFollowUp = false;
+        if (c.followUpDate) {
+          const [y, m, d] = c.followUpDate.split('-').map(Number);
+          const fDate = new Date(y, m - 1, d);
+          fDate.setHours(0, 0, 0, 0);
+          const diff = Math.round((fDate - todayObj) / (1000 * 60 * 60 * 24));
+          if (diff <= 7) isSoonFollowUp = true;
+        }
+        return isHotStage || isSoonFollowUp;
+      }).slice(0, 6); // 取前 6 大戰略重點
+
+      if (priorityList.length === 0) {
+        slide4.addText("目前暫無近 7 天待複訪或評估中之重點目標，可持續開展初訪摸底。", {
+          x: 1.0, y: 2.5, w: 11.0, h: 1.0,
+          fontSize: 16, color: "94A3B8"
+        });
+      } else {
+        const tableRows = [
+          [
+            { text: "診所名稱", options: { bold: true, fill: "0F172A", color: "38BDF8" } },
+            { text: "轄區", options: { bold: true, fill: "0F172A", color: "38BDF8" } },
+            { text: "當前狀態", options: { bold: true, fill: "0F172A", color: "38BDF8" } },
+            { text: "現有機台 / 耗材需求", options: { bold: true, fill: "0F172A", color: "38BDF8" } },
+            { text: "預計複訪日", options: { bold: true, fill: "0F172A", color: "38BDF8" } },
+            { text: "戰情備忘與下一步策略", options: { bold: true, fill: "0F172A", color: "38BDF8" } }
+          ]
+        ];
+
+        priorityList.forEach(item => {
+          const isEx = item.clientType === 'existing';
+          const stText = isEx ? '⭐ 既有客戶' : (statusNames[item.status] || item.status);
+          tableRows.push([
+            { text: item.name || '', options: { color: "FFFFFF" } },
+            { text: item.district || '', options: { color: "CBD5E1" } },
+            { text: stText, options: { color: "FACC15" } },
+            { text: item.equipment || '未註明', options: { color: "CBD5E1" } },
+            { text: item.followUpDate || '未排定', options: { color: "38BDF8" } },
+            { text: item.notes || '無', options: { color: "94A3B8" } }
+          ]);
         });
 
-        for (let j = 0; j < 2; j++) {
-          const item = list[i + j];
-          if (!item) break;
-
-          const posX = j === 0 ? 0.8 : 5.2;
-          const isExisting = item.clientType === 'existing';
-          
-          slide.addShape(pptx.ShapeType.roundRect, {
-            x: posX, y: 1.0, w: 4.1, h: 4.1,
-            fill: { color: "0F172A" },
-            line: { color: isExisting ? "FACC15" : (item.status === 'gray' ? "64748B" : "334155"), width: isExisting ? 2 : 1.5 },
-            rectRadius: 0.1
-          });
-
-          const clientTypeLabel = isExisting ? '[⭐ 既有客戶]' : '[🎯 陌開客戶]';
-          slide.addText(`${clientTypeLabel} ${item.name}`, {
-            x: posX + 0.2, y: 1.2, w: 3.7, h: 0.6,
-            fontSize: 15, bold: true, color: isExisting ? "FACC15" : (item.status === 'gray' ? "94A3B8" : "38BDF8")
-          });
-
-          const stageText = isExisting ? '常態耗材巡補/擴機評估' : (statusNames[item.status] || item.status);
-          slide.addText(`推進階段：${stageText}\n地址：${item.address || '未註明'}`, {
-            x: posX + 0.2, y: 1.8, w: 3.7, h: 0.7,
-            fontSize: 11, color: "CBD5E1"
-          });
-
-          slide.addText(`現有機台/耗材：\n${item.equipment || '未註明'}`, {
-            x: posX + 0.2, y: 2.6, w: 3.7, h: 0.7,
-            fontSize: 11, color: "38BDF8", bold: true
-          });
-
-          slide.addText(`戰情策略備忘：\n${item.notes || '無'}`, {
-            x: posX + 0.2, y: 3.4, w: 3.7, h: 1.0,
-            fontSize: 10, color: "E2E8F0"
-          });
-
-          const visitInfo = `拜訪日: ${item.lastVisitDate || '未記錄'}  |  預計複訪: ${item.followUpDate || '未設定'}`;
-          slide.addText(visitInfo, {
-            x: posX + 0.2, y: 4.6, w: 3.7, h: 0.4,
-            fontSize: 9, color: "94A3B8"
-          });
-        }
+        slide4.addTable(tableRows, {
+          x: 0.8, y: 1.2, w: 11.5,
+          colW: [2.0, 1.0, 1.8, 2.2, 1.4, 3.1],
+          border: { pt: 1, color: "334155" },
+          fontSize: 11,
+          align: "center",
+          valign: "middle"
+        });
       }
 
-      pptx.writeFile({ fileName: `新北北基醫美拓展戰報_${scopeTag}_${todayTag}.pptx` });
+      pptx.writeFile({ fileName: `新北北基醫美拓展戰情分析報告_${scopeTag}_${todayTag}.pptx` });
     };
 
     /* 點擊編輯情報：無論在任何模式下，自動解除全地圖模式、升起面板並聚焦表單 */
