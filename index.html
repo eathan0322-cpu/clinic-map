@@ -154,6 +154,33 @@
       100% { transform: scale(1.8); opacity: 0; }
     }
 
+    /* 待拜訪追蹤目標：雷達呼吸擴散閃爍動畫 */
+    .pulse-radar-ring {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      pointer-events: none;
+      animation: marker-radar-breath 1.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+    }
+    @keyframes marker-radar-breath {
+      0% {
+        transform: translate(-50%, -50%) scale(0.4);
+        opacity: 0.95;
+      }
+      70% {
+        transform: translate(-50%, -50%) scale(1.35);
+        opacity: 0.25;
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(1.6);
+        opacity: 0;
+      }
+    }
+
     .control-panel { background: #0f172a; padding: 14px; border-radius: 12px; margin-bottom: 14px; border: 1px solid #334155; }
     
     /* 搜尋列容器與清空按鈕樣式 */
@@ -865,41 +892,69 @@
       markers.forEach(m => map.removeLayer(m));
       markers = [];
 
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
       const filtered = getFilteredClinics();
 
       filtered.forEach(item => {
         const isExisting = item.clientType === 'existing';
+        let isFollowUpSoon = false;
+
+        if (item.followUpDate) {
+          const [y, m, d] = item.followUpDate.split('-').map(Number);
+          const fDate = new Date(y, m - 1, d);
+          fDate.setHours(0, 0, 0, 0);
+          const diffDays = Math.round((fDate - today) / (1000 * 60 * 60 * 24));
+          if (diffDays <= 7) {
+            isFollowUpSoon = true;
+          }
+        }
+
         let marker;
 
         if (isExisting) {
+          const radarRingHtml = isFollowUpSoon ? `<div class="pulse-radar-ring" style="background: rgba(234, 179, 8, 0.45); box-shadow: 0 0 10px rgba(234, 179, 8, 0.8);"></div>` : '';
           const vipIcon = L.divIcon({
             className: 'vip-marker-wrap',
             html: `
-              <div style="
-                width: 26px; height: 26px;
-                background: radial-gradient(circle at 30% 30%, #334155, #0f172a);
-                border: 2px solid #eab308;
-                border-radius: 50%;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.5), 0 0 10px rgba(234, 179, 8, 0.45);
-                display: flex; align-items: center; justify-content: center;
-                font-size: 13px; line-height: 1; color: #facc15;
-              ">⭐</div>
+              <div style="position: relative; width: 26px; height: 26px;">
+                ${radarRingHtml}
+                <div style="
+                  position: relative;
+                  width: 26px; height: 26px;
+                  background: radial-gradient(circle at 30% 30%, #334155, #0f172a);
+                  border: 2px solid #eab308;
+                  border-radius: 50%;
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.5), 0 0 10px rgba(234, 179, 8, 0.45);
+                  display: flex; align-items: center; justify-content: center;
+                  font-size: 13px; line-height: 1; color: #facc15;
+                  z-index: 2;
+                ">⭐</div>
+              </div>
             `,
             iconSize: [26, 26],
             iconAnchor: [13, 13]
           });
           marker = L.marker([item.lat, item.lng], { icon: vipIcon, draggable: false }).addTo(map);
         } else {
+          const pColor = colorMap[item.status] || '#ef4444';
+          const radarRingHtml = isFollowUpSoon ? `<div class="pulse-radar-ring" style="background: ${pColor}; opacity: 0.6; box-shadow: 0 0 10px ${pColor};"></div>` : '';
           const pIcon = L.divIcon({
             className: 'prospect-marker-wrap',
             html: `
-              <div style="
-                width: 20px; height: 20px;
-                background-color: ${colorMap[item.status] || '#ef4444'};
-                border: 2px solid #ffffff;
-                border-radius: 50%;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.35);
-              "></div>
+              <div style="position: relative; width: 20px; height: 20px;">
+                ${radarRingHtml}
+                <div style="
+                  position: relative;
+                  width: 20px; height: 20px;
+                  background-color: ${pColor};
+                  border: 2px solid #ffffff;
+                  border-radius: 50%;
+                  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+                  z-index: 2;
+                "></div>
+              </div>
             `,
             iconSize: [20, 20],
             iconAnchor: [10, 10]
