@@ -209,8 +209,75 @@
     .search-clear-btn:hover { background: #64748b; }
     
     .filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
-    .filter-full { margin-bottom: 8px; }
+    .filter-full { margin-bottom: 8px; position: relative; }
     .filter-select { width: 100%; padding: 7px 10px; background: #1e293b; border: 1px solid #475569; border-radius: 6px; color: white; font-size: 13px; font-weight: bold; cursor: pointer; }
+
+    /* 推進階段多選下拉選單樣式 */
+    .multi-select-btn {
+      width: 100%;
+      padding: 7px 10px;
+      background: #1e293b;
+      border: 1px solid #475569;
+      border-radius: 6px;
+      color: white;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .multi-select-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #0284c7;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+      z-index: 1050;
+      margin-top: 4px;
+      padding: 6px;
+    }
+    .multi-select-header {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 8px 6px 8px;
+      border-bottom: 1px solid #334155;
+      margin-bottom: 4px;
+    }
+    .multi-select-action {
+      font-size: 11px;
+      color: #38bdf8;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .multi-select-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      color: #cbd5e1;
+      user-select: none;
+    }
+    .multi-select-item:hover {
+      background: #1e293b;
+      color: #ffffff;
+    }
+    .multi-select-item input[type="checkbox"] {
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+      accent-color: #0284c7;
+    }
 
     .export-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
     .btn-export-excel { padding: 8px; background: #047857; color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
@@ -363,17 +430,43 @@
         </div>
       </div>
 
+      <!-- 推進階段多選下拉選單 -->
       <div class="filter-full">
-        <label>推進階段篩選（僅限陌開客戶）</label>
-        <select id="statusFilter" class="filter-select" onchange="applyFilters()">
-          <option value="ALL">🌈 全部階段顯示</option>
-          <option value="red">🔴 未探勘 / 迷霧防禦</option>
-          <option value="yellow">🟡 初訪摸底（DM留置/競品盤點）</option>
-          <option value="orange">🟠 鎖定對話（取得院長/店長窗口）</option>
-          <option value="green">🟢 評估試機（DEMO/提報報價）</option>
-          <option value="purple">🟣 合作結案（已成交/常態維護）</option>
-          <option value="gray">⚪ 暫緩擱置（多次碰壁/冷凍抗性）</option>
-        </select>
+        <label>推進階段多選篩選（僅限陌開客戶）</label>
+        <button type="button" class="multi-select-btn" id="statusMultiSelectBtn" onclick="toggleMultiSelectDropdown(event)">
+          <span id="statusMultiSelectLabel">🌈 全部階段顯示 (6)</span>
+          <span style="font-size: 11px; color:#94a3b8;">▼</span>
+        </button>
+        <div class="multi-select-dropdown" id="statusMultiSelectDropdown">
+          <div class="multi-select-header">
+            <button type="button" class="multi-select-action" onclick="selectAllStatuses(true)">全選</button>
+            <button type="button" class="multi-select-action" onclick="selectAllStatuses(false)">清空</button>
+          </div>
+          <label class="multi-select-item">
+            <input type="checkbox" value="red" checked onchange="handleStatusCheckboxChange()">
+            <span>🔴 未探勘 / 迷霧防禦</span>
+          </label>
+          <label class="multi-select-item">
+            <input type="checkbox" value="yellow" checked onchange="handleStatusCheckboxChange()">
+            <span>🟡 初訪摸底（DM留置/競品盤點）</span>
+          </label>
+          <label class="multi-select-item">
+            <input type="checkbox" value="orange" checked onchange="handleStatusCheckboxChange()">
+            <span>🟠 鎖定對話（取得院長/店長窗口）</span>
+          </label>
+          <label class="multi-select-item">
+            <input type="checkbox" value="green" checked onchange="handleStatusCheckboxChange()">
+            <span>🟢 評估試機（DEMO/提報報價）</span>
+          </label>
+          <label class="multi-select-item">
+            <input type="checkbox" value="purple" checked onchange="handleStatusCheckboxChange()">
+            <span>🟣 合作結案（已成交/常態維護）</span>
+          </label>
+          <label class="multi-select-item">
+            <input type="checkbox" value="gray" checked onchange="handleStatusCheckboxChange()">
+            <span>⚪ 暫緩擱置（多次碰壁/冷凍抗性）</span>
+          </label>
+        </div>
       </div>
 
       <div class="export-btn-row">
@@ -548,7 +641,7 @@
     let clinics = [];
     let currentDistrict = '板橋區';
     let currentClientType = 'ALL';
-    let currentStatusFilter = 'ALL';
+    let selectedStatuses = ['red', 'yellow', 'orange', 'green', 'purple', 'gray'];
     let searchQuery = '';
     let markers = [];
 
@@ -677,6 +770,50 @@
       setTimeout(() => map.invalidateSize(), 280);
     };
 
+    /* 推進階段多選勾選框邏輯 */
+    window.toggleMultiSelectDropdown = function(e) {
+      e.stopPropagation();
+      const dd = document.getElementById('statusMultiSelectDropdown');
+      dd.style.display = (dd.style.display === 'block') ? 'none' : 'block';
+    };
+
+    document.addEventListener('click', function(e) {
+      const dd = document.getElementById('statusMultiSelectDropdown');
+      const btn = document.getElementById('statusMultiSelectBtn');
+      if (dd && btn && !dd.contains(e.target) && !btn.contains(e.target)) {
+        dd.style.display = 'none';
+      }
+    });
+
+    window.handleStatusCheckboxChange = function() {
+      const cbs = document.querySelectorAll('#statusMultiSelectDropdown input[type="checkbox"]');
+      selectedStatuses = [];
+      cbs.forEach(cb => {
+        if (cb.checked) selectedStatuses.push(cb.value);
+      });
+      updateMultiSelectButtonLabel();
+      renderMap();
+    };
+
+    window.selectAllStatuses = function(selectAll) {
+      const cbs = document.querySelectorAll('#statusMultiSelectDropdown input[type="checkbox"]');
+      cbs.forEach(cb => cb.checked = selectAll);
+      handleStatusCheckboxChange();
+    };
+
+    function updateMultiSelectButtonLabel() {
+      const label = document.getElementById('statusMultiSelectLabel');
+      if (selectedStatuses.length === 6) {
+        label.innerText = '🌈 全部階段顯示 (6)';
+      } else if (selectedStatuses.length === 0) {
+        label.innerText = '🚫 未勾選任何階段 (0)';
+      } else if (selectedStatuses.length === 1) {
+        label.innerText = statusNames[selectedStatuses[0]];
+      } else {
+        label.innerText = `✅ 已選 ${selectedStatuses.length} 項階段`;
+      }
+    }
+
     clinicsRef.on('value', (snapshot) => {
       const data = snapshot.val();
       if (!data) {
@@ -736,7 +873,6 @@
     function applyFilters(shouldFly = false) {
       currentDistrict = document.getElementById('districtFilter').value;
       currentClientType = document.getElementById('clientTypeFilter').value;
-      currentStatusFilter = document.getElementById('statusFilter').value;
       renderMap();
 
       if (shouldFly && districtCoords[currentDistrict]) {
@@ -746,9 +882,11 @@
     }
 
     function quickFilterStatus(status) {
-      document.getElementById('statusFilter').value = status;
-      currentStatusFilter = status;
-      renderMap();
+      const cbs = document.querySelectorAll('#statusMultiSelectDropdown input[type="checkbox"]');
+      cbs.forEach(cb => {
+        cb.checked = (cb.value === status);
+      });
+      handleStatusCheckboxChange();
     }
 
     window.setQuickDate = function(days) {
@@ -873,7 +1011,7 @@
         const isExisting = item.clientType === 'existing';
         const matchDistrict = (currentDistrict === 'ALL') || (item.district === currentDistrict);
         const matchClient = (currentClientType === 'ALL') || (item.clientType === currentClientType);
-        const matchStatus = isExisting ? true : ((currentStatusFilter === 'ALL') || (item.status === currentStatusFilter));
+        const matchStatus = isExisting ? true : selectedStatuses.includes(item.status);
         
         const matchSearch = !searchQuery || 
           (item.name && item.name.toLowerCase().includes(searchQuery)) ||
